@@ -23,6 +23,18 @@ for(const s of initial)close(s.chance,s.item.kind==='zero'?.03:s.item.kind==='fr
 close(initial.reduce((sum,s)=>sum+s.chance,0),1);
 assert.equal(initial.at(-1).end,360);
 const fake=(...values)=>({getRandomValues(a){assert.ok(values.length,'Unexpected random draw');a[0]=values.shift();return a;}});
+// Edited probabilities must drive selection and geometry identically, including extremes.
+for(const percent of [1,25,99]){
+  const custom=[{...state.items[0],weight:1},{...state.items[2],weight:99},{...zero,chance:percent}];
+  for(let gate=0;gate<100;gate++)assert.equal(custom[C.pickWeightedIndex(custom,fake(gate,0))].kind==='zero',gate<percent);
+  const layout=C.sectorLayout(custom);close(layout[0].chance,(1-percent/100)/100);close(layout[1].chance,(1-percent/100)*.99);close(layout[2].chance,percent/100);
+  for(let index=0;index<3;index++)assert.equal(C.indexAtPointer(C.rotationForIndex(index,layout),layout),index);
+  for(let ticket=0;ticket<100;ticket++)assert.equal(C.pickWeightedIndex(custom,fake(99,ticket)),ticket===0?0:1);
+  const saved=C.normalizeState({...C.newState(),items:custom});assert.equal(saved.items[0].weight,1);assert.equal(saved.items[1].weight,99);assert.equal(saved.items[2].chance,percent);
+}
+for(const value of [0,101,1.5,'40',null])assert.notEqual(C.validateItems([{...state.items[0],weight:value}]),'');
+for(const value of [0,100,1.5,'3',null])assert.notEqual(C.validateItems([state.items[0],{...zero,chance:value}]),'');
+assert.notEqual(C.validateItems([state.items[0],state.items[0]]),'');
 // Enumerate every gate value: exactly three of 100 draws select zero.
 for(let gate=0;gate<100;gate++)assert.equal(state.items[C.pickWeightedIndex(state.items,fake(gate,0))].kind==='zero',gate<3);
 // Enumerate every non-zero ticket: each friend gets 40, each task 77 (1124 tickets total).

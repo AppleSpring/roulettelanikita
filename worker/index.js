@@ -6,12 +6,13 @@ const unpack = row => ({...JSON.parse(row.payload),revision:row.revision,updated
 
 function cleanSettings(body) {
   if(!body||!Number.isSafeInteger(body.baseRevision)||body.baseRevision<1||typeof body.noRepeat!=='boolean'||!Array.isArray(body.items)||body.items.length<1||body.items.length>31)return null;
+  if(C.validateItems(body.items))return null;
   const ids=new Set(),items=[];
   for(const item of body.items){
     if(!item||typeof item.id!=='string'||!/^[a-zA-Z0-9_-]{1,90}$/.test(item.id)||ids.has(item.id)||!['task','friend','zero'].includes(item.kind)||typeof item.enabled!=='boolean')return null;
     if((item.kind==='zero')!==(item.id==='zero'))return null;
     if(typeof item.title!=='string'||typeof item.description!=='string'||item.title.length>70||item.description.length>900)return null;
-    ids.add(item.id);items.push({id:item.id,title:item.title.trim(),short:String(item.short||item.title).slice(0,20),description:item.description.trim(),kind:item.kind,enabled:item.enabled});
+    ids.add(item.id);items.push({id:item.id,title:item.title.trim(),short:String(item.short||item.title).slice(0,20),description:item.description.trim(),kind:item.kind,enabled:item.enabled,...(item.kind==='zero'?{chance:C.zeroChance(item)}:{weight:C.weight(item)})});
   }
   if(C.validateItems(items))return null;
   return {items,noRepeat:body.noRepeat};

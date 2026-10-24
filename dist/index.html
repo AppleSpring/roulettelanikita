@@ -25,6 +25,8 @@
     .legend-dot.zero{background:#b8a0ff}.result-card.zero .result-number{color:#b8a0ff}.wheel-legend{flex-wrap:wrap;gap:12px 18px}.zero-note{display:block;margin-top:7px;color:#b8a0ff}.item-kind.zero{color:#b8a0ff}
     .sync-status{font-size:11px;color:var(--muted);text-align:center;margin:14px 0 0;min-height:17px}.sync-status[data-offline="true"]{color:var(--orange)}
     .deferred-list{list-style:none;margin:0;padding:0}.deferred-list li{border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:12px}.deferred-list h3{font-size:17px;margin:0 0 10px;overflow-wrap:anywhere}.deferred-list p{font-size:13px;line-height:1.6;color:var(--muted);white-space:pre-wrap;overflow-wrap:anywhere}.deferred-list button{min-height:44px}.defer-button{width:100%;margin-top:10px;min-height:46px}
+    #settingsDialog{width:min(680px,calc(100% - 28px))}#settingsDialog .dialog-head{position:sticky;top:0;background:var(--panel);z-index:2}#settingsDialog .dialog-foot{z-index:2}select{font:inherit;color:var(--ink);background:var(--bg)}select:focus-visible{outline:3px solid var(--orange);outline-offset:3px}.editor-tools{flex-wrap:wrap;justify-content:flex-start}.editor-tools button,.remove-item,.move-item,.dialog-head .icon-button{min-width:44px;min-height:44px}.add-tools{margin:0 0 12px}.field{display:flex;flex-direction:column;gap:6px;margin-top:12px;min-width:0}.field>span,.enable-label{font-size:11px;color:var(--muted)}.field input,.field select{width:100%;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:10px;background:var(--bg);color:var(--ink);font-size:16px;min-width:0}.field textarea{margin:0;font-size:14px;color:var(--ink);min-height:80px;border:1px solid var(--line)}.enable-label{display:flex;align-items:center;gap:8px;min-height:44px;cursor:pointer}.edit-top{justify-content:space-between}.sector-chance{margin-left:auto;color:var(--green);font-size:13px;font-variant-numeric:tabular-nums}.edit-item:has(.item-enabled:not(:checked)){border-style:dashed}.edit-advanced summary,.backup-tools summary{cursor:pointer;font-size:12px;min-height:44px;display:flex;align-items:center;gap:8px;color:var(--muted)}.edit-advanced summary:before,.backup-tools summary:before{content:'+';font-size:20px}.edit-advanced[open] summary:before,.backup-tools[open] summary:before{content:'−'}.edit-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.move-tools{display:flex;gap:8px;margin-top:12px}.move-item{border:1px solid var(--line);border-radius:8px;background:none;font-size:12px;padding:8px 12px}.backup-tools{border-top:1px solid var(--line);margin-top:24px;padding-top:10px}.backup-tools .subtext{margin:5px 0 10px}#undoRemove[hidden],#addZeroButton[hidden]{display:none}#editorCount{margin-bottom:12px}.footer span{overflow-wrap:anywhere;min-width:0}.top-note{max-width:160px}
+    @media(max-width:760px){.field textarea{font-size:16px}.edit-fields{gap:8px}.edit-item{padding:12px}.field>span{line-height:1.4}#settingsDialog .dialog-body{padding:16px 12px}#settingsDialog .dialog-head{padding:14px}.intro-text{max-width:100%}}
   </style>
 </head>
 <body>
@@ -37,9 +39,9 @@
       <div class="game-grid">
         <section class="intro" aria-labelledby="mainTitle">
           <div class="pill"><span class="live-dot"></span><span id="modeLabel">БЕЗ ПОВТОРОВ</span></div>
-          <h1 id="mainTitle">НЕ УГАДАЛ?<br> <em>КРУТИ.</em></h1>
-          <p class="intro-text">Ответ не совпал — дело за колесом.<br>Выпало имя? <b>Теперь решает этот друг.</b><br>Зеро? <b>Жених наказывает всех пятерых.</b></p>
-          <div class="rule"><span class="rule-line"></span>Один промах — один штраф.</div>
+          <h1 id="mainTitle">УРА,<br> <em>ЛУДКА.</em></h1>
+          <p class="intro-text">За что крутить — решают пацаны.<br>Выпало имя? <b>Этот друг выбирает наказание.</b><br>Зеро? <b>Жених придумывает наказание всем.</b></p>
+          <div class="rule"><span class="rule-line"></span>Повод ваш. Наказание за колесом.</div>
           <div class="desktop-action"><button class="primary spin-button" id="spinDesktop"><span class="spin-label">КРУТИТЬ КОЛЕСО</span><svg viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></button><p class="button-hint" id="hintDesktop">Нажимает жених. Остальные наблюдают.</p></div>
         </section>
         <section class="wheel-area" aria-label="Колесо наказаний">
@@ -51,13 +53,25 @@
       <div class="bottom-bar"><div class="progress"><span class="progress-count" id="progressCount">00 / 17</span><span class="progress-label">СЕКТОРОВ<br>УЖЕ ВЫПАЛО</span><div class="progress-dots" id="progressDots" aria-hidden="true"></div></div><div class="bottom-actions"><button class="text-button" id="deferredButton">На потом · 0</button><button class="text-button" id="historyButton">История</button><button class="text-button" id="resetButton">Заново ↗</button></div></div>
       <p class="sync-status" id="syncStatus" role="status">Подключаем общий список…</p>
     </main>
-    <footer class="footer"><span>ТОЛИК · ДИМА · СТАС · САНЯ · КИРИЛЛ</span><span>Что выпало в баре, остается в баре.</span></footer>
+    <footer class="footer"><span id="friendsFooter">ТОЛИК · ДИМА · СТАС · САНЯ · КИРИЛЛ</span><span>Сегодня у жениха все по плану. По нашему.</span></footer>
   </div>
   <dialog id="resultDialog" aria-labelledby="resultTitle" aria-describedby="resultDescription">
     <div class="result-card" id="resultCard"><div class="result-top"><span>КОЛЕСО РЕШИЛО</span><div class="result-tools"><span id="resultRound">ХОД 01</span><button class="icon-button sound-toggle" type="button" aria-label="Звук" aria-pressed="true" title="Выключить звук"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4 6 8H3v8h3l5 4Z"/><path class="sound-on" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/><path class="sound-off" d="m16 9 6 6m0-6-6 6"/></svg></button></div></div><div class="result-number" id="resultNumber" aria-hidden="true">01</div><span class="result-tag" id="resultTag">ТВОЕ НАКАЗАНИЕ</span><h2 id="resultTitle"></h2><p class="result-description" id="resultDescription"></p><button class="primary" id="doneButton">ВЫПОЛНЕНО ✓</button><button class="secondary defer-button" id="deferButton">Записать на будущее</button><div class="result-bottom"><button class="text-button" id="skipButton">Не подходит — пропустить</button><button class="text-button" id="showWheelButton">Посмотреть колесо</button></div></div>
   </dialog>
-  <dialog id="deferredDialog" aria-labelledby="deferredTitle"><div class="dialog-head"><h2 id="deferredTitle">На потом</h2><button class="icon-button close-dialog" aria-label="Закрыть отложенные задания">✕</button></div><div class="dialog-body"><p class="subtext">Эти наказания ждут своего часа. Список общий для всех по ссылке.</p><p class="editor-error" id="deferredError" role="alert"></p><p class="empty" id="deferredEmpty">Пока ничего не отложено.</p><ul class="deferred-list" id="deferredList"></ul></div></dialog>
-  <dialog id="settingsDialog" aria-labelledby="settingsTitle"><div class="dialog-head"><h2 id="settingsTitle">Что в колесе</h2><button class="icon-button close-dialog" aria-label="Закрыть настройки">✕</button></div><form id="settingsForm"><div class="dialog-body"><p class="subtext">Это общий список для всех по ссылке. Добавляй, меняй или убирай задания — после сохранения их увидят остальные. История вращений у каждого своя.<span class="zero-note">Имена выпадают реже обычных штрафов. Зеро — 3% на каждом вращении, может повторяться и не входит в счетчик круга.</span></p><label class="toggle-row"><span>Не повторять штрафы и имена</span><input type="checkbox" id="noRepeatInput" checked></label><div id="editList"></div><div class="editor-tools"><button class="secondary" type="button" id="addItemButton">+ Свой штраф</button><button class="text-button" type="button" id="defaultsButton">Вернуть исходные 18</button></div></div><div class="dialog-foot"><div style="flex:1"><p class="editor-error" id="editorError" role="alert"></p><button class="text-button" type="button" id="reloadSettings" hidden>Загрузить свежий список</button><button class="primary" type="submit" id="saveSettings" style="width:100%">СОХРАНИТЬ ДЛЯ ВСЕХ</button></div></div></form></dialog>
+  <dialog id="deferredDialog" aria-labelledby="deferredTitle"><div class="dialog-head"><h2 id="deferredTitle">На потом</h2><button class="icon-button close-dialog" aria-label="Закрыть отложенные задания">✕</button></div><div class="dialog-body"><p class="subtext">В бане выпало задание для бара? Оно подождет здесь. Выполните — отметьте. Список общий для всех.</p><p class="editor-error" id="deferredError" role="alert"></p><p class="empty" id="deferredEmpty">Пока ничего не отложено. Сохранить наказание можно кнопкой «Записать на будущее», когда оно выпадет.</p><ul class="deferred-list" id="deferredList"></ul></div></dialog>
+  <dialog id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-head"><h2 id="settingsTitle">Настройки колеса</h2><button class="icon-button close-dialog" aria-label="Закрыть настройки">✕</button></div>
+    <form id="settingsForm"><div class="dialog-body">
+      <p class="subtext">Меняй задания, имена и шансы. Нажмешь «Сохранить для всех» — изменения появятся у остальных. История вращений у каждого своя.</p>
+      <label class="toggle-row"><span>Повторять штрафы и имена</span><input type="checkbox" id="repeatInput"></label>
+      <p class="subtext">Без повторов выпавший сектор уходит до нового круга. Зеро может выпадать снова. Его шанс задается отдельно.</p>
+      <div class="editor-tools add-tools"><button class="secondary" type="button" id="addItemButton">+ Штраф</button><button class="secondary" type="button" id="addFriendButton">+ Имя</button><button class="secondary" type="button" id="addZeroButton">+ Зеро</button></div>
+      <p class="subtext" id="editorCount"></p><p class="subtext" id="chanceHelp">«Частота» — от 1 до 100: чем больше число, тем чаще выпадает сектор. Рядом показан его шанс в начале круга. В режиме без повторов шансы оставшихся секторов растут.</p>
+      <label class="field" style="margin-bottom:16px"><span>Найти задание или имя</span><input type="search" id="sectorSearch" placeholder="Например, Толик или бокал"></label><p class="subtext" id="searchEmpty" hidden>Ничего не найдено. Попробуй другое слово или очисти поиск.</p>
+      <div id="editList"></div><button class="secondary" type="button" id="undoRemove" hidden>Вернуть удаленный сектор</button>
+      <details class="backup-tools"><summary>Резервная копия и сброс</summary><p class="subtext">Скачай список перед большой переделкой. Из файла можно вернуть тексты, шансы и режим повторов. История и «На потом» в копию не входят.</p><div class="editor-tools"><button class="secondary" type="button" id="exportSettings">Скачать список</button><button class="secondary" type="button" id="importSettings">Загрузить из файла</button><button class="text-button" type="button" id="defaultsButton">Вернуть исходные 18</button></div><input type="file" id="importFile" accept="application/json,.json" hidden></details>
+    </div><div class="dialog-foot"><div style="flex:1"><p class="editor-error" id="editorError" role="alert"></p><button class="text-button" type="button" id="reloadSettings" hidden>Загрузить свежий список</button><button class="primary" type="submit" id="saveSettings" style="width:100%">СОХРАНИТЬ ДЛЯ ВСЕХ</button></div></div></form>
+  </dialog>
   <dialog id="historyDialog" aria-labelledby="historyTitle"><div class="dialog-head"><h2 id="historyTitle">Как все было</h2><button class="icon-button close-dialog" aria-label="Закрыть историю">✕</button></div><div class="dialog-body"><ol class="history-list" id="historyList"></ol><p id="historyEmpty" class="empty">Пока все чисто. Первый поворот — за женихом.</p></div></dialog>
   <dialog id="confirmDialog" aria-labelledby="confirmTitle"><div class="dialog-head"><h2 id="confirmTitle">Начать заново?</h2><button class="icon-button close-dialog" aria-label="Отмена">✕</button></div><div class="dialog-body"><p class="subtext" id="confirmText" style="margin:0"></p></div><div class="dialog-foot"><button class="secondary" id="confirmCancel">Отмена</button><button class="primary" id="confirmYes">НАЧАТЬ ЗАНОВО</button></div></dialog>
   <div class="toast" id="toast" role="status" hidden></div><div class="sr-only" id="liveStatus" aria-live="polite"></div>
@@ -85,14 +99,15 @@
       {id:'wrong-hand',title:'Бокал не той рукой',short:'НЕ ТОЙ РУКОЙ',kind:'task',description:'До 23:59 сегодняшнего дня держи бокал только непривычной рукой: правша — левой, левша — правой. Второй рукой подстраховывать нельзя.',enabled:true},
       ZERO
     ];
-    function defaults(){return DEFAULTS.map(x=>({...x}));}
+    const weight=item=>Number.isInteger(item.weight)&&item.weight>=1&&item.weight<=100?item.weight:item.kind==='friend'?40:77;
+    const zeroChance=item=>Number.isInteger(item?.chance)&&item.chance>=1&&item.chance<=99?item.chance:3;
+    function defaults(){return DEFAULTS.map(x=>({...x,...(x.kind==='zero'?{chance:zeroChance(x)}:{weight:weight(x)})}));}
     function pickIndex(n,random=root.crypto){if(!Number.isInteger(n)||n<1)throw Error('Empty wheel');const range=4294967296,limit=range-range%n;const a=new Uint32Array(1);do{random.getRandomValues(a);}while(a[0]>=limit);return a[0]%n;}
-    const weight=item=>item.kind==='friend'?40:77;
     function pickWeightedIndex(items,random=root.crypto){
       const zero=items.findIndex(i=>i.kind==='zero'),ordinary=items.filter(i=>i.kind!=='zero');
       if(!ordinary.length)throw Error('Empty wheel');
-      // A separate exact 3/100 draw keeps zero rare as ordinary sectors disappear.
-      if(zero!==-1&&pickIndex(100,random)<3)return zero;
+      // Zero keeps its configured percentage as ordinary sectors disappear.
+      if(zero!==-1&&pickIndex(100,random)<zeroChance(items[zero]))return zero;
       let ticket=pickIndex(ordinary.reduce((sum,item)=>sum+weight(item),0),random);
       for(let i=0;i<items.length;i++){if(items[i].kind==='zero')continue;ticket-=weight(items[i]);if(ticket<0)return i;}
       throw Error('Invalid wheel');
@@ -100,8 +115,8 @@
     function sectorLayout(items){
       const total=items.filter(i=>i.kind!=='zero').reduce((sum,item)=>sum+weight(item),0);
       if(!total)return[];
-      const ordinaryShare=items.some(i=>i.kind==='zero')?.97:1;let start=0;
-      return items.map((item,index)=>{const chance=item.kind==='zero'?.03:ordinaryShare*weight(item)/total;const end=index===items.length-1?360:start+360*chance;const segment={item,start,end,chance};start=end;return segment;});
+      const zero=items.find(i=>i.kind==='zero'),zeroShare=zero?zeroChance(zero)/100:0,ordinaryShare=1-zeroShare;let start=0;
+      return items.map((item,index)=>{const chance=item.kind==='zero'?zeroShare:ordinaryShare*weight(item)/total;const end=index===items.length-1?360:start+360*chance;const segment={item,start,end,chance};start=end;return segment;});
     }
     function rotationForIndex(index,segments,current=0,turns=6){const s=segments[index];const target=((360-(s.start+s.end)/2)%360+360)%360;const normalized=((current%360)+360)%360;return current+turns*360+((target-normalized+360)%360);}
     function indexAtPointer(rotation,segments){const angle=((-rotation%360)+360)%360;const index=segments.findIndex(s=>angle>=s.start&&angle<s.end);return index<0?segments.length-1:index;}
@@ -122,11 +137,23 @@
     function activeItems(state){return state.items.filter(i=>i.enabled);}
     function remainingItems(state){const used=new Set(state.used);const items=activeItems(state).filter(i=>i.kind==='zero'||!state.noRepeat||!used.has(i.id));return items.some(i=>i.kind!=='zero')?items:[];}
     function newState(){return{version:3,items:defaults(),noRepeat:true,used:[],history:[],pending:null,sharedRevision:0};}
-    function validateItems(items){if(!Array.isArray(items)||!items.length||items.length>31)return'Нужно от 1 до 31 сектора.';if(items.some(i=>!i.title.trim()||!i.description.trim()))return'Заполни название и описание каждого сектора.';if(!items.some(i=>i.enabled&&i.kind!=='zero'))return'Включи хотя бы один обычный или именной сектор.';return'';}
+    function validateItems(items){
+      if(!Array.isArray(items)||!items.length||items.length>31)return'Нужно от 1 до 31 сектора.';
+      const ids=new Set();
+      for(const i of items){
+        if(!i||typeof i.id!=='string'||!/^[a-zA-Z0-9_-]{1,90}$/.test(i.id)||ids.has(i.id)||!['task','friend','zero'].includes(i.kind)||(i.kind==='zero')!==(i.id==='zero')||typeof i.enabled!=='boolean')return'Проверь типы секторов: допустимы штраф, имя и одно зеро.';
+        ids.add(i.id);
+        if(typeof i.title!=='string'||!i.title.trim()||i.title.length>70||typeof i.description!=='string'||!i.description.trim()||i.description.length>900)return'Заполни название (до 70 знаков) и описание (до 900) каждого сектора.';
+        if(i.short!==undefined&&(typeof i.short!=='string'||i.short.length>20))return'Подпись на колесе — до 20 знаков.';
+        if(i.kind==='zero'&&i.chance!==undefined&&(!Number.isInteger(i.chance)||i.chance<1||i.chance>99))return'Шанс зеро — целое число от 1 до 99. Чтобы убрать его, выключи сектор.';
+        if(i.kind!=='zero'&&i.weight!==undefined&&(!Number.isInteger(i.weight)||i.weight<1||i.weight>100))return'Частота выпадения — целое число от 1 до 100.';
+      }
+      if(!items.some(i=>i.enabled&&i.kind!=='zero'))return'Включи хотя бы один штраф или имя.';return'';
+    }
     function normalizeState(raw){
       if(!raw||![1,2,3].includes(raw.version)||!Array.isArray(raw.items))return newState();
       const kind=i=>i.id==='zero'&&i.kind==='zero'?'zero':i.kind==='friend'?'friend':'task',ids=new Set();
-      const items=raw.items.slice(0,31).filter(i=>i&&typeof i.id==='string'&&typeof i.title==='string'&&typeof i.description==='string').map(i=>({id:i.id.slice(0,90),title:i.title.slice(0,70),short:String(i.short||i.title).slice(0,20),description:i.description.slice(0,900),kind:kind(i),enabled:i.enabled!==false})).filter(i=>{if(ids.has(i.id))return false;ids.add(i.id);return true;});
+      const items=raw.items.slice(0,31).filter(i=>i&&typeof i.id==='string'&&typeof i.title==='string'&&typeof i.description==='string').map(i=>({id:i.id.slice(0,90),title:i.title.slice(0,70),short:String(i.short||i.title).slice(0,20),description:i.description.slice(0,900),kind:kind(i),enabled:i.enabled!==false,...(kind(i)==='zero'?{chance:zeroChance(i)}:{weight:weight(i)})})).filter(i=>{if(ids.has(i.id))return false;ids.add(i.id);return true;});
       if(validateItems(items))return newState();
       // Upgrade existing games without replacing edited tasks or losing their result/history.
       if(raw.version===1&&!ids.has('zero')&&items.length<31){items.push({...ZERO});ids.add('zero');}
@@ -145,7 +172,7 @@
     function applyShared(state,shared){
       return{...state,version:3,items:shared.items.map(i=>({...i})),noRepeat:shared.noRepeat,sharedRevision:shared.revision};
     }
-    root.RouletteCore={defaults,pickIndex,pickWeightedIndex,sectorLayout,rotationForIndex,indexAtPointer,spinTickTimes,activeItems,remainingItems,newState,validateItems,normalizeState,applyShared};
+    root.RouletteCore={defaults,weight,zeroChance,pickIndex,pickWeightedIndex,sectorLayout,rotationForIndex,indexAtPointer,spinTickTimes,activeItems,remainingItems,newState,validateItems,normalizeState,applyShared};
   })(globalThis);
   </script>
   <script id="roulette-audio">
@@ -230,7 +257,7 @@
     'use strict';
     const C=RouletteCore,$=id=>document.getElementById(id),KEY='shtrafnaya-v1';
     let storageAvailable=true,state;try{state=C.normalizeState(JSON.parse(localStorage.getItem(KEY)));}catch{state=C.newState();storageAvailable=false;}
-    let spinning=false,rotation=0,draft=[],confirmAction=null,toastTimer;
+    let spinning=false,rotation=0,draft=[],confirmAction=null,toastTimer,draftBaseline='',removedItem=null;
     let sharedLatest=null,sharedRequest=null,draftRevision=0,savingShared=false;
     let deferredItems=[],deferredRequest=null,deferring=false;
     const spinButtons=[$('spinDesktop'),$('spinMobile')],dialogs=[...document.querySelectorAll('dialog')];
@@ -264,14 +291,14 @@
       })();return sharedRequest;
     }
     function editorBusy(busy){
-      $('settingsForm').querySelectorAll('input,textarea,button').forEach(element=>element.disabled=busy);
+      $('settingsForm').querySelectorAll('input,textarea,select,button').forEach(element=>element.disabled=busy);
       $('saveSettings').disabled=busy||!draftRevision;
       $('saveSettings').textContent=savingShared?'СОХРАНЯЕМ…':'СОХРАНИТЬ ДЛЯ ВСЕХ';
     }
     async function loadEditor(){
       draftRevision=0;$('reloadSettings').hidden=true;$('editorError').textContent='Загружаем общий список…';editorBusy(true);
       const data=await pullShared();if(!$('settingsDialog').open)return;
-      if(data){state=C.applyShared(state,data);save();draft=data.items.map(i=>({...i}));draftRevision=data.revision;$('noRepeatInput').checked=data.noRepeat;renderEditor();$('editorError').textContent='';updateUI();}
+      if(data){state=C.applyShared(state,data);save();draft=data.items.map(i=>({...i}));draftRevision=data.revision;$('repeatInput').checked=!data.noRepeat;removedItem=null;renderEditor();draftBaseline=editorSnapshot();$('editorError').textContent='';updateUI();}
       else{$('editorError').textContent='Не удалось загрузить задания. Проверь связь и попробуй еще раз.';$('reloadSettings').hidden=false;}
       editorBusy(false);
     }
@@ -281,7 +308,7 @@
         const response=await fetch('/api/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({baseRevision:draftRevision,items:clean,noRepeat}),signal:AbortSignal.timeout(8000)});
         const data=await response.json();
         if(!response.ok){$('editorError').textContent=data.error||'Не удалось сохранить.';if(response.status===409)$('reloadSettings').hidden=false;return;}
-        sharedLatest=data;state=C.applyShared(state,data);save();draftRevision=data.revision;closeDialog($('settingsDialog'));updateUI();sharedStatus('Общий список · сохранено для всех');toast('Сохранено для всех. Задания обновлены.');
+        sharedLatest=data;state=C.applyShared(state,data);save();draftRevision=data.revision;draftBaseline=editorSnapshot();closeDialog($('settingsDialog'),true);updateUI();sharedStatus('Общий список · сохранено для всех');toast('Настройки сохранены для всех.');
       }catch{$('editorError').textContent='Нет подтверждения сохранения. Загрузи свежий список, чтобы проверить.';$('reloadSettings').hidden=false;sharedStatus('Нет связи с общим списком',true);}
       finally{savingShared=false;editorBusy(false);}
     }
@@ -307,14 +334,33 @@
     function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,3500);}
     function syncModal(){document.body.classList.toggle('modal-open',dialogs.some(d=>d.open));}
     function openDialog(d){if(!d.open)d.showModal();syncModal();}
-    function closeDialog(d){d.close();syncModal();}
-    dialogs.forEach(d=>{d.addEventListener('close',()=>{syncModal();maybeApplyShared();});d.addEventListener('cancel',e=>{if(deferring&&d.id==='resultDialog')e.preventDefault();setTimeout(syncModal,0);});});
+    function editorSnapshot(){return JSON.stringify({items:draft,noRepeat:!$('repeatInput').checked});}
+    function editorDirty(){return !!draftRevision&&editorSnapshot()!==draftBaseline;}
+    function confirmChange(title,text,label,action){confirmAction=action;$('confirmTitle').textContent=title;$('confirmText').textContent=text;$('confirmYes').textContent=label;openDialog($('confirmDialog'));}
+    function closeDialog(d,force=false){
+      if(d.id==='settingsDialog'&&!force){if(savingShared)return;if(editorDirty()){confirmChange('Закрыть без сохранения?','Правки в этой форме не сохранятся. Общий список останется прежним.','ЗАКРЫТЬ БЕЗ СОХРАНЕНИЯ',()=>closeDialog(d,true));return;}}
+      d.close();syncModal();
+    }
+    dialogs.forEach(d=>{d.addEventListener('close',()=>{syncModal();maybeApplyShared();});d.addEventListener('cancel',e=>{if((deferring&&d.id==='resultDialog')||(d.id==='settingsDialog'&&(savingShared||editorDirty()))){e.preventDefault();if(d.id==='settingsDialog')closeDialog(d);}setTimeout(syncModal,0);});});
+    window.addEventListener('beforeunload',e=>{if($('settingsDialog').open&&editorDirty()){e.preventDefault();e.returnValue='';}});
     document.querySelectorAll('.close-dialog').forEach(b=>b.addEventListener('click',()=>closeDialog(b.closest('dialog'))));
     function svgNode(name,attrs,text){const n=document.createElementNS('http://www.w3.org/2000/svg',name);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
     function drawWheel(items){const svg=$('wheel');svg.replaceChildren();svg.style.transition='none';svg.style.transform='rotate(0deg)';rotation=0;const n=items.length||1,r=292,segments=C.sectorLayout(items);const point=a=>[300+r*Math.cos(a*Math.PI/180),300+r*Math.sin(a*Math.PI/180)];if(!items.length){svg.append(svgNode('circle',{cx:300,cy:300,r,fill:'#282e23',stroke:'#414a37'}));svg.append(svgNode('text',{x:300,y:170,'text-anchor':'middle',fill:'#a6ad9c','font-size':18,'font-family':'Arial'},'КРУГ ЗАКОНЧЕН'));}
-      segments.forEach((segment,i)=>{const {item}=segment,start=-90+segment.start,end=-90+segment.end,step=segment.end-segment.start,[x1,y1]=point(start),[x2,y2]=point(end);const fill=item.kind==='zero'?'#b8a0ff':item.kind==='friend'?'#ff9b6b':(i%2?'#c9e783':'#d7f38c');const path=n===1?null:`M300 300 L${x1} ${y1} A${r} ${r} 0 ${step>180?1:0} 1 ${x2} ${y2} Z`;svg.append(svgNode(n===1?'circle':'path',n===1?{cx:300,cy:300,r,fill}:{d:path,fill,stroke:'#151714','stroke-width':2}));const angle=start+step/2,rad=angle*Math.PI/180;let label=item.short||item.title.toUpperCase();const max=n>20?10:16;if(label.length>max)label=label.slice(0,max-1)+'…';const tx=300+184*Math.cos(rad),ty=300+184*Math.sin(rad);const flip=angle>90&&angle<270?180:0;svg.append(svgNode('text',{x:tx,y:ty,transform:`rotate(${angle+flip} ${tx} ${ty})`,'text-anchor':'middle','dominant-baseline':'middle','font-family':'Arial, Helvetica, sans-serif','font-weight':800,'font-size':n>20?12:14,'letter-spacing':.4,fill:'#21271b'},label));});
+      segments.forEach((segment,i)=>{const {item}=segment,start=-90+segment.start,end=-90+segment.end,step=segment.end-segment.start,[x1,y1]=point(start),[x2,y2]=point(end);const fill=item.kind==='zero'?'#b8a0ff':item.kind==='friend'?'#ff9b6b':(i%2?'#c9e783':'#d7f38c');const path=n===1?null:`M300 300 L${x1} ${y1} A${r} ${r} 0 ${step>180?1:0} 1 ${x2} ${y2} Z`;svg.append(svgNode(n===1?'circle':'path',n===1?{cx:300,cy:300,r,fill}:{d:path,fill,stroke:'#151714','stroke-width':2}));if(step<4)return;const angle=start+step/2,rad=angle*Math.PI/180;let label=item.short||item.title.toUpperCase();const max=n>20?10:16;if(label.length>max)label=label.slice(0,max-1)+'…';const tx=300+184*Math.cos(rad),ty=300+184*Math.sin(rad);const flip=angle>90&&angle<270?180:0;svg.append(svgNode('text',{x:tx,y:ty,transform:`rotate(${angle+flip} ${tx} ${ty})`,'text-anchor':'middle','dominant-baseline':'middle','font-family':'Arial, Helvetica, sans-serif','font-weight':800,'font-size':n>20?12:14,'letter-spacing':.4,fill:'#21271b'},label));});
       svg.setAttribute('aria-label',`Колесо: ${items.map(i=>i.title).join(', ')}`);$('hubCount').textContent=items.length;}
-    function updateUI(redraw=true){const active=C.activeItems(state).filter(i=>i.kind!=='zero'),remaining=C.remainingItems(state);if(redraw)drawWheel(remaining);const usedCount=active.filter(i=>state.used.includes(i.id)).length;$('progressCount').textContent=String(usedCount).padStart(2,'0')+' / '+String(active.length).padStart(2,'0');$('progressDots').replaceChildren(...active.map(i=>{const d=document.createElement('i');if(state.used.includes(i.id))d.className='used';return d;}));const friendCount=remaining.filter(i=>i.kind==='friend').length;$('taskLegend').textContent=`Штрафы: ${remaining.filter(i=>i.kind==='task').length}`;$('friendLegend').textContent=`Друзья: ${friendCount}`;$('zeroLegend').hidden=!remaining.some(i=>i.kind==='zero');$('modeLabel').textContent=state.noRepeat?'ШТРАФЫ БЕЗ ПОВТОРОВ':'ПОВТОРЫ ВКЛЮЧЕНЫ';spinButtons.forEach(b=>{b.disabled=spinning||(!sharedLatest&&!state.sharedRevision);b.querySelector('.spin-label').textContent=spinning?'КРУТИТСЯ…':state.pending?'ПОКАЗАТЬ НАКАЗАНИЕ':remaining.length?'КРУТИТЬ КОЛЕСО':'НОВЫЙ КРУГ';});const hint=spinning?'Сейчас узнаем, кому повезло.':state.pending?'Наказание уже выпало. Открой и отметь результат.':!remaining.length?'Все штрафы сыграли. Начнем еще раз?':'Нажимает жених. Остальные наблюдают.';['hintDesktop','hintMobile'].forEach(id=>$(id).textContent=hint);$('settingsButton').disabled=spinning||!!state.pending;$('resetButton').disabled=spinning;}
+    function updateUI(redraw=true){
+      const active=C.activeItems(state).filter(i=>i.kind!=='zero'),remaining=C.remainingItems(state);if(redraw)drawWheel(remaining);
+      const usedCount=active.filter(i=>state.used.includes(i.id)).length;$('progressCount').textContent=String(usedCount).padStart(2,'0')+' / '+String(active.length).padStart(2,'0');
+      $('progressDots').replaceChildren(...active.map(i=>{const d=document.createElement('i');if(state.used.includes(i.id))d.className='used';return d;}));
+      $('taskLegend').textContent=`Штрафы: ${remaining.filter(i=>i.kind==='task').length}`;$('friendLegend').textContent=`Имена: ${remaining.filter(i=>i.kind==='friend').length}`;
+      const zero=remaining.find(i=>i.kind==='zero');$('zeroLegend').hidden=!zero;if(zero){const dot=document.createElement('i');dot.className='legend-dot zero';$('zeroLegend').replaceChildren(dot,document.createTextNode('Зеро · '+C.zeroChance(zero)+'%'));}
+      $('friendsFooter').textContent=state.items.filter(i=>i.kind==='friend'&&i.enabled).map(i=>i.title.toUpperCase()).join(' · ')||'ЖЕНИХ И КОМПАНИЯ';
+      document.querySelector('.top-note').innerHTML='МАЛЬЧИШНИК<br>ЖЕНИХ. ПАЦАНЫ. КОЛЕСО.';
+      $('modeLabel').textContent=state.noRepeat?'ШТРАФЫ БЕЗ ПОВТОРОВ':'ПОВТОРЫ ВКЛЮЧЕНЫ';
+      spinButtons.forEach(b=>{b.disabled=spinning||(!sharedLatest&&!state.sharedRevision);b.querySelector('.spin-label').textContent=spinning?'КРУТИТСЯ…':state.pending?'ПОКАЗАТЬ НАКАЗАНИЕ':remaining.length?'КРУТИТЬ КОЛЕСО':'НОВЫЙ КРУГ';});
+      const hint=spinning?'Сейчас узнаем, кому повезло.':state.pending?'Наказание уже выпало. Выполни, отложи или пропусти.':!remaining.length?'Все сектора сыграли. Начнем новый круг?':'Нажимает жених. Пацаны предвкушают.';
+      ['hintDesktop','hintMobile'].forEach(id=>$(id).textContent=hint);$('settingsButton').disabled=spinning;$('resetButton').disabled=spinning;
+    }
     function showResult(){const p=state.pending;if(!p)return;$('resultCard').classList.toggle('manual',p.kind==='friend');$('resultCard').classList.toggle('zero',p.kind==='zero');$('resultNumber').textContent=p.kind==='zero'?'0':p.kind==='friend'?'↗':String(p.number).padStart(2,'0');$('resultRound').textContent='ХОД '+String(p.number).padStart(2,'0');$('resultTag').textContent=p.kind==='zero'?'ТЕПЕРЬ РЕШАЕТ ЖЕНИХ':p.kind==='friend'?'НАКАЗАНИЕ ПРИДУМЫВАЕТ':'ТВОЕ НАКАЗАНИЕ';$('resultTitle').textContent=p.title;$('resultDescription').textContent=p.description;$('liveStatus').textContent=`Выпало: ${p.title}. ${p.description}`;openDialog($('resultDialog'));}
     function settle(status){if(!state.pending)return;const p=state.pending;state.history.push({id:p.id,title:p.title,kind:p.kind,status});state.history=state.history.slice(-200);state.pending=null;save();closeDialog($('resultDialog'));maybeApplyShared();updateUI();if(status==='done')toast('Засчитано. Можно двигаться дальше.');else if(status==='deferred')toast('Записано на будущее. Открой список «На потом».');else toast(p.kind==='zero'||!state.noRepeat?'Пропущено. Крутим дальше.':'Пропущено. Этот сектор уже сыграл.');}
     function resetRound(){state.used=[];state.history=[];state.pending=null;save();updateUI();toast('Новый круг. Все снова в игре.');}
@@ -338,13 +384,60 @@
       const onEnd=e=>{if(e.propertyName==='transform')finish();};
       wheel.addEventListener('transitionend',onEnd);setTimeout(finish,duration+150);
     }
-    function renderEditor(){const list=$('editList');list.replaceChildren();draft.forEach(item=>{const card=document.createElement('div');card.className='edit-item';const top=document.createElement('div');top.className='edit-top';const check=document.createElement('input');check.type='checkbox';check.className='item-enabled';check.checked=item.enabled;check.setAttribute('aria-label','Включить сектор '+item.title);check.onchange=()=>item.enabled=check.checked;const title=document.createElement('input');title.type='text';title.value=item.title;title.maxLength=70;title.placeholder='Название';title.setAttribute('aria-label','Название сектора');title.oninput=()=>{item.title=title.value;item.short=title.value.toUpperCase().slice(0,20);};const remove=document.createElement('button');remove.type='button';remove.className='remove-item';remove.textContent='×';remove.setAttribute('aria-label','Удалить сектор '+item.title);remove.onclick=()=>{draft=draft.filter(d=>d!==item);renderEditor();};top.append(check,title,remove);const description=document.createElement('textarea');description.value=item.description;description.maxLength=900;description.setAttribute('aria-label','Описание сектора '+item.title);description.oninput=()=>item.description=description.value;card.append(top,description);if(item.kind==='friend'||item.kind==='zero'){const label=document.createElement('div');label.className='item-kind'+(item.kind==='zero'?' zero':'');label.textContent=item.kind==='zero'?'ЗЕРО · 3% · МОЖЕТ ПОВТОРЯТЬСЯ':'ИМЕННОЙ СЕКТОР · ПОНИЖЕННЫЙ ШАНС';card.append(label);}list.append(card);});}
-    function openSettings(){if(spinning||state.pending||savingShared)return;draft=state.items.map(i=>({...i}));renderEditor();openDialog($('settingsDialog'));loadEditor();}
+    function updateEditorChances(){
+      const active=draft.filter(i=>i.enabled),segments=C.sectorLayout(active),chances=new Map(segments.map(s=>[s.item.id,s.chance]));
+      $('editList').querySelectorAll('.sector-chance').forEach(el=>{const item=draft.find(i=>i.id===el.dataset.id),chance=chances.get(el.dataset.id);el.textContent=!item.enabled?'Выключен':chance===undefined?'Нужен штраф или имя':(chance*100).toLocaleString('ru-RU',{maximumFractionDigits:2})+'%';});
+      $('editorCount').textContent=`Секторов: ${draft.length} из 31 · Включено: ${active.length}`;
+      $('addZeroButton').hidden=draft.some(i=>i.kind==='zero');$('undoRemove').hidden=!removedItem;
+    }
+    function filterEditor(){const query=$('sectorSearch').value.trim().toLocaleLowerCase('ru-RU');let visible=0;$('editList').querySelectorAll('.edit-item').forEach(card=>{const item=draft.find(i=>i.id===card.dataset.id);card.hidden=!!query&&!(item.title+' '+item.description+' '+(item.short||'')).toLocaleLowerCase('ru-RU').includes(query);if(!card.hidden)visible++;});$('searchEmpty').hidden=visible>0||!query;}
+    $('sectorSearch').oninput=filterEditor;
+    function renderEditor(){
+      const list=$('editList'),expanded=new Set([...list.querySelectorAll('.edit-item')].filter(c=>c.querySelector('details')?.open).map(c=>c.dataset.id));list.replaceChildren();
+      draft.forEach((item,index)=>{
+        const card=document.createElement('div');card.className='edit-item';card.dataset.id=item.id;
+        const field=(label,control)=>{const wrap=document.createElement('label'),text=document.createElement('span');wrap.className='field';text.textContent=label;wrap.append(text,control);return wrap;};
+        const input=(value,max)=>{const el=document.createElement('input');el.type='text';el.value=value;el.maxLength=max;return el;};
+        const top=document.createElement('div');top.className='edit-top';const enableLabel=document.createElement('label');enableLabel.className='enable-label';const check=document.createElement('input');check.type='checkbox';check.className='item-enabled';check.checked=item.enabled;check.setAttribute('aria-label','Включить сектор '+item.title);check.onchange=()=>{item.enabled=check.checked;updateEditorChances();};enableLabel.append(check,document.createTextNode('В игре'));
+        const chance=document.createElement('span');chance.className='sector-chance';chance.dataset.id=item.id;
+        const remove=document.createElement('button');remove.type='button';remove.className='remove-item';remove.textContent='×';remove.setAttribute('aria-label','Удалить сектор '+item.title);remove.onclick=()=>{removedItem={item:{...item},index};draft.splice(index,1);renderEditor();toast('Сектор убран из черновика. Его можно вернуть внизу списка.');};top.append(enableLabel,chance,remove);
+        const title=input(item.title,70),description=document.createElement('textarea');title.oninput=()=>{if(!item.short||item.short===item.title.toUpperCase().slice(0,20)){item.short=title.value.toUpperCase().slice(0,20);short.value=item.short;}item.title=title.value;check.setAttribute('aria-label','Включить сектор '+item.title);remove.setAttribute('aria-label','Удалить сектор '+item.title);};description.value=item.description;description.maxLength=900;description.oninput=()=>item.description=description.value;
+        card.append(top,field('Название',title),field('Что нужно сделать',description));
+        const details=document.createElement('details'),summary=document.createElement('summary');details.className='edit-advanced';details.open=expanded.has(item.id);summary.textContent='Шанс, тип и подпись';details.append(summary);const fields=document.createElement('div');fields.className='edit-fields';
+        const short=input(item.short||'',20);short.oninput=()=>item.short=short.value;fields.append(field('Подпись на колесе',short));
+        if(item.kind!=='zero'){
+          const kind=document.createElement('select');for(const [value,text]of [['task','Штраф'],['friend','Имя друга']]){const option=document.createElement('option');option.value=value;option.textContent=text;kind.append(option);}kind.value=item.kind;kind.onchange=()=>{item.kind=kind.value;item.weight=kind.value==='friend'?40:77;renderEditor();};fields.append(field('Тип сектора',kind));
+        }
+        const frequency=document.createElement('input');frequency.type='number';frequency.inputMode='numeric';frequency.min='1';frequency.max=item.kind==='zero'?'99':'100';frequency.step='1';frequency.required=true;frequency.value=item.kind==='zero'?C.zeroChance(item):C.weight(item);frequency.setAttribute('aria-describedby','chanceHelp');frequency.oninput=()=>{item[item.kind==='zero'?'chance':'weight']=frequency.value===''?NaN:Number(frequency.value);updateEditorChances();};fields.append(field(item.kind==='zero'?'Шанс зеро, % (1–99)':'Частота (1–100)',frequency));details.append(fields);
+        const moves=document.createElement('div');moves.className='move-tools';for(const [delta,label]of [[-1,'↑ Выше'],[1,'↓ Ниже']]){const button=document.createElement('button');button.type='button';button.className='move-item';button.textContent=label;button.disabled=index+delta<0||index+delta>=draft.length;button.onclick=()=>{const target=index+delta;if(target<0||target>=draft.length)return;[draft[index],draft[target]]=[draft[target],draft[index]];renderEditor();$('editList').children[target].scrollIntoView({block:'nearest'});};moves.append(button);}details.append(moves);card.append(details);list.append(card);
+      });updateEditorChances();filterEditor();
+    }
+    function openSettings(){if(spinning||savingShared)return;draftRevision=0;draftBaseline='';$('sectorSearch').value='';draft=state.items.map(i=>({...i}));renderEditor();openDialog($('settingsDialog'));loadEditor();}
     function showHistory(){const list=$('historyList');list.replaceChildren();$('historyEmpty').hidden=!!state.history.length;state.history.slice().reverse().forEach((entry,i)=>{const li=document.createElement('li');const n=document.createElement('span');n.className='history-number';n.textContent=String(state.history.length-i).padStart(2,'0');const body=document.createElement('div');const title=document.createElement('div');title.className='history-title';title.textContent=entry.title;const status=document.createElement('div');status.className='history-status'+(entry.status==='skipped'?' skipped':'');status.textContent=entry.status==='skipped'?'Пропущено':entry.status==='deferred'?'Записано на будущее':entry.kind==='zero'?'Пацаны выполнили наказание':entry.kind==='friend'?'Задание друга выполнено':'Выполнено';body.append(title,status);li.append(n,body);list.append(li);});openDialog($('historyDialog'));}
     spinButtons.forEach(b=>b.addEventListener('click',spin));$('doneButton').onclick=()=>settle('done');$('skipButton').onclick=()=>settle('skipped');$('showWheelButton').onclick=()=>closeDialog($('resultDialog'));$('settingsButton').onclick=openSettings;$('historyButton').onclick=showHistory;$('resetButton').onclick=askReset;$('confirmCancel').onclick=()=>closeDialog($('confirmDialog'));$('confirmYes').onclick=()=>{closeDialog($('confirmDialog'));if(confirmAction)confirmAction();confirmAction=null;};
-    $('addItemButton').onclick=()=>{if(draft.length>=31){$('editorError').textContent='Максимум 31 сектор.';return;}draft.push({id:'custom-'+crypto.randomUUID(),title:'Свой штраф',short:'СВОЙ ШТРАФ',description:'Напиши, что нужно сделать.',kind:'task',enabled:true});renderEditor();$('editList').lastElementChild.scrollIntoView({block:'nearest',behavior:'smooth'});};
-    $('defaultsButton').onclick=()=>{draft=C.defaults();renderEditor();$('editorError').textContent='Исходные 18 загружены. Нажми «Сохранить для всех», чтобы применить.';};
-    $('settingsForm').onsubmit=e=>{e.preventDefault();if(savingShared||!draftRevision)return;const clean=draft.map(i=>({...i,title:i.title.trim(),description:i.description.trim()}));const error=C.validateItems(clean);if(error){$('editorError').textContent=error;return;}saveSharedSettings(clean,$('noRepeatInput').checked);};
+    function addSector(kind){
+      if(draft.length>=31){$('editorError').textContent='Максимум 31 сектор. Удали ненужный, чтобы добавить новый.';return;}
+      if(kind==='zero'){if(draft.some(i=>i.kind==='zero'))return;draft.push(C.defaults().find(i=>i.kind==='zero'));}
+      else draft.push({id:'custom-'+crypto.randomUUID(),title:kind==='friend'?'Имя друга':'Свой штраф',short:kind==='friend'?'ИМЯ ДРУГА':'СВОЙ ШТРАФ',description:kind==='friend'?'Придумай жениху наказание. Пацаны помогут.':'Напиши, что нужно сделать.',kind,weight:kind==='friend'?40:77,enabled:true});
+      $('sectorSearch').value='';renderEditor();$('editList').lastElementChild.scrollIntoView({block:'nearest',behavior:'smooth'});$('editList').lastElementChild.querySelector('input[type="text"]').focus();
+    }
+    $('addItemButton').onclick=()=>addSector('task');$('addFriendButton').onclick=()=>addSector('friend');$('addZeroButton').onclick=()=>addSector('zero');
+    $('undoRemove').onclick=()=>{if(!removedItem)return;if(draft.length>=31||draft.some(i=>i.id===removedItem.item.id)){$('editorError').textContent='Не удалось вернуть: список полон или этот сектор уже есть.';return;}draft.splice(Math.min(removedItem.index,draft.length),0,removedItem.item);removedItem=null;renderEditor();};
+    $('defaultsButton').onclick=()=>confirmChange('Вернуть исходный список?','Тексты и шансы в черновике заменятся исходными. У остальных список изменится только после сохранения.','ВЕРНУТЬ ИСХОДНЫЕ',()=>{draft=C.defaults();$('repeatInput').checked=false;removedItem=null;renderEditor();$('editorError').textContent='Исходный список загружен. Сохрани, чтобы применить для всех.';});
+    const cleanDraft=()=>draft.map(i=>({...i,title:i.title.trim(),short:String(i.short||i.title).trim().slice(0,20),description:i.description.trim()}));
+    $('settingsForm').addEventListener('invalid',e=>{const details=e.target.closest('details');if(details)details.open=true;},true);
+    $('settingsForm').onsubmit=e=>{e.preventDefault();if(savingShared||!draftRevision)return;const clean=cleanDraft(),error=C.validateItems(clean);if(error){$('editorError').textContent=error;return;}saveSharedSettings(clean,!$('repeatInput').checked);};
+    $('exportSettings').onclick=()=>{
+      const items=cleanDraft(),error=C.validateItems(items);if(error){$('editorError').textContent=error;return;}
+      const blob=new Blob([JSON.stringify({format:'shtrafnaya-settings',version:1,items,noRepeat:!$('repeatInput').checked},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='shtrafnaya-settings.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);toast('Список подготовлен для скачивания.');
+    };
+    $('importSettings').onclick=()=>$('importFile').click();
+    $('importFile').onchange=async e=>{
+      const file=e.target.files[0];e.target.value='';if(!file)return;
+      try{if(file.size>65536)throw Error('Файл слишком большой. Нужна копия списка до 64 КБ.');const data=JSON.parse(await file.text());if(data.format!=='shtrafnaya-settings'||data.version!==1||typeof data.noRepeat!=='boolean')throw Error('Выбери JSON-файл, скачанный из настроек рулетки.');const error=C.validateItems(data.items);if(error)throw Error(error);if(!$('settingsDialog').open||savingShared)return;
+        confirmChange('Загрузить список из файла?','Черновик будет заменен. У остальных список изменится только после сохранения.','ЗАГРУЗИТЬ СПИСОК',()=>{draft=data.items.map(i=>({id:i.id,title:i.title,short:i.short||i.title.slice(0,20),description:i.description,kind:i.kind,enabled:i.enabled,...(i.kind==='zero'?{chance:C.zeroChance(i)}:{weight:C.weight(i)})}));$('repeatInput').checked=!data.noRepeat;removedItem=null;renderEditor();$('editorError').textContent='Список загружен из файла. Сохрани, чтобы применить для всех.';});
+      }catch(error){$('editorError').textContent=error instanceof SyntaxError?'Не удалось прочитать JSON. Выбери файл резервной копии.':error.message;}
+    };
     $('reloadSettings').onclick=()=>{if(savingShared)return;if(!draftRevision){loadEditor();return;}confirmAction=()=>loadEditor();$('confirmTitle').textContent='Загрузить свежий список?';$('confirmText').textContent='Несохраненные правки в этой форме заменятся последней версией с сервера.';$('confirmYes').textContent='ЗАГРУЗИТЬ';openDialog($('confirmDialog'));};
     document.addEventListener('keydown',e=>{if(e.code==='Space'&&!dialogs.some(d=>d.open)&&!['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName)){e.preventDefault();spin();}});
     window.addEventListener('storage',e=>{if(e.key===SOUND_KEY){audio.setEnabled(e.newValue!=='off');syncSound();}if(e.key===KEY&&!spinning&&!dialogs.some(d=>d.open)){try{state=C.normalizeState(JSON.parse(e.newValue));updateUI();if(state.pending)showResult();}catch{}}});
