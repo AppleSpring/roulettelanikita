@@ -10,8 +10,8 @@ const context=vm.createContext({crypto:webcrypto});
 vm.runInContext(scripts[0],context);
 const C=context.RouletteCore;
 const state=C.newState();
-assert.equal(state.items.length,16);
-assert.equal(state.items.filter(i=>i.kind==='task').length,10);
+assert.equal(state.items.length,18);
+assert.equal(state.items.filter(i=>i.kind==='task').length,12);
 assert.deepEqual(Array.from(state.items.filter(i=>i.kind==='friend'),i=>i.title),['Толик','Дима','Стас','Саня','Кирилл']);
 assert.equal(C.validateItems(state.items),'');
 const zero=state.items.find(i=>i.kind==='zero');
@@ -19,15 +19,15 @@ assert.equal(zero.id,'zero');
 assert.ok(zero.description.includes('Выполняют все пятеро'));
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-10,`${a} != ${b}`);
 const initial=C.sectorLayout(state.items);
-for(const s of initial)close(s.chance,s.item.kind==='zero'?.03:s.item.kind==='friend'?.04:.077);
+for(const s of initial)close(s.chance,s.item.kind==='zero'?.03:s.item.kind==='friend'?(97*40/112400):(97*77/112400));
 close(initial.reduce((sum,s)=>sum+s.chance,0),1);
 assert.equal(initial.at(-1).end,360);
 const fake=(...values)=>({getRandomValues(a){assert.ok(values.length,'Unexpected random draw');a[0]=values.shift();return a;}});
 // Enumerate every gate value: exactly three of 100 draws select zero.
 for(let gate=0;gate<100;gate++)assert.equal(state.items[C.pickWeightedIndex(state.items,fake(gate,0))].kind==='zero',gate<3);
-// Enumerate every non-zero ticket: each friend gets 40, each task 77.
-const tickets=Array(16).fill(0);
-for(let ticket=0;ticket<970;ticket++)tickets[C.pickWeightedIndex(state.items,fake(99,ticket))]++;
+// Enumerate every non-zero ticket: each friend gets 40, each task 77 (1124 tickets total).
+const tickets=Array(18).fill(0);
+for(let ticket=0;ticket<1124;ticket++)tickets[C.pickWeightedIndex(state.items,fake(99,ticket))]++;
 assert.deepEqual(tickets,Array.from(state.items,i=>i.kind==='zero'?0:i.kind==='friend'?40:77));
 assert.equal(C.pickIndex(100,fake(4294967295,2)),2,'Rejection sampling avoids modulo bias');
 for(let n=1;n<=30;n++){
@@ -47,8 +47,8 @@ for(let n=1;n<=30;n++){
 }
 const seen=new Set();
 while(C.remainingItems(state).length){const pool=C.remainingItems(state);const item=pool[C.pickWeightedIndex(pool,fake(99,0))];assert.ok(!seen.has(item.id));seen.add(item.id);state.used.push(item.id);}
-assert.equal(seen.size,15);assert.equal(C.remainingItems(state).length,0);
-state.noRepeat=false;assert.equal(C.remainingItems(state).length,16);
+assert.equal(seen.size,17);assert.equal(C.remainingItems(state).length,0);
+state.noRepeat=false;assert.equal(C.remainingItems(state).length,18);
 assert.throws(()=>C.pickIndex(0));
 assert.throws(()=>C.pickWeightedIndex([zero]));
 const withoutZero=state.items.filter(i=>i.kind!=='zero');
@@ -56,18 +56,25 @@ close(C.sectorLayout(withoutZero).reduce((sum,s)=>sum+s.chance,0),1);
 assert.equal(C.pickWeightedIndex(withoutZero,fake(0)),0);
 const counts=Array(15).fill(0);for(let i=0;i<30000;i++)counts[C.pickIndex(15)]++;
 assert.ok(counts.every(n=>n>1600&&n<2400));
-const restored=C.normalizeState(JSON.parse(JSON.stringify(state)));assert.equal(restored.items.length,16);assert.equal(restored.used.length,15);
+const restored=C.normalizeState(JSON.parse(JSON.stringify(state)));assert.equal(restored.items.length,18);assert.equal(restored.used.length,17);
 const pending=C.newState();pending.pending={...pending.items[0],number:1};const p=C.normalizeState(pending);assert.equal(p.pending.id,p.items[0].id);assert.ok(p.used.includes(p.items[0].id));
 const old={version:1,items:withoutZero.map(i=>({...i})),used:['wallpaper'],noRepeat:false,history:[{id:'wallpaper',title:'Моя заставка',kind:'task',status:'done'}],pending:{...withoutZero[2],number:2}};
 old.items[0].title='Моя заставка';old.items[1].enabled=false;
-const upgraded=C.normalizeState(old);assert.equal(upgraded.version,2);assert.equal(upgraded.items.length,16);assert.equal(upgraded.items[0].title,'Моя заставка');assert.equal(upgraded.items[1].enabled,false);assert.equal(upgraded.noRepeat,false);assert.equal(upgraded.history[0].title,'Моя заставка');assert.equal(upgraded.pending.id,'tolik');assert.equal(C.normalizeState(upgraded).items.length,16,'No duplicate zero on reload');
+const upgraded=C.normalizeState(old);assert.equal(upgraded.version,3);assert.equal(upgraded.items.length,18);assert.equal(upgraded.items[0].title,'Моя заставка');assert.equal(upgraded.items[1].enabled,false);assert.equal(upgraded.noRepeat,false);assert.equal(upgraded.history[0].title,'Моя заставка');assert.equal(upgraded.pending.id,'tolik');assert.equal(C.normalizeState(upgraded).items.length,18,'No duplicate zero on reload');
 const zeroPending=C.newState();zeroPending.pending={...zero,number:1};const zp=C.normalizeState(zeroPending);assert.equal(zp.pending.kind,'zero');assert.equal(zp.used.length,0);assert.ok(C.remainingItems(zp).some(i=>i.id==='zero'));
-zp.history.push({id:zero.id,title:zero.title,kind:zero.kind,status:'done'});zp.pending=null;assert.equal(C.normalizeState(zp).history[0].kind,'zero');assert.equal(C.remainingItems(zp).length,16,'Zero does not consume a normal sector');
-const removed=C.newState();removed.items=removed.items.filter(i=>i.kind!=='zero');assert.equal(C.normalizeState(removed).items.length,15,'Explicitly removed zero stays removed');
-assert.equal(C.normalizeState({version:1,items:[]}).items.length,16);
-assert.equal(C.normalizeState({version:1,items:[{id:'a'}]}).items.length,16);
+zp.history.push({id:zero.id,title:zero.title,kind:zero.kind,status:'done'});zp.pending=null;assert.equal(C.normalizeState(zp).history[0].kind,'zero');assert.equal(C.remainingItems(zp).length,18,'Zero does not consume a normal sector');
+const removed=C.newState();removed.items=removed.items.filter(i=>i.kind!=='zero');assert.equal(C.normalizeState(removed).items.length,17,'Explicitly removed zero stays removed');
+assert.equal(C.normalizeState({version:1,items:[]}).items.length,18);
+assert.equal(C.normalizeState({version:1,items:[{id:'a'}]}).items.length,18);
 assert.notEqual(C.validateItems(C.defaults().map(i=>({...i,enabled:false}))), '');
 assert.notEqual(C.validateItems([zero]),'');
+const v2=C.newState();v2.version=2;v2.items=v2.items.filter(i=>!['beer-menu','wrong-hand'].includes(i.id));
+const originalFont='Увеличь размер текста на телефоне до максимального. До конца викторины пользуйся как обычно. После игры можно вернуть обратно.';
+v2.items.find(i=>i.id==='font').description=originalFont;v2.items.find(i=>i.id==='wallpaper').description='Моя собственная формулировка';v2.pending={...v2.items.find(i=>i.id==='font'),number:2};
+const v3=C.normalizeState(v2);assert.equal(v3.items.length,18);assert.ok(v3.items.find(i=>i.id==='font').description.includes('23:59'));assert.ok(v3.pending.description.includes('23:59'));assert.equal(v3.items.find(i=>i.id==='wallpaper').description,'Моя собственная формулировка');assert.equal(C.normalizeState(v3).items.length,18);
+assert.ok(!html.includes('class="result-note"'));
+const shared=C.applyShared(v3,{revision:10,items:C.defaults().filter(i=>i.id!=='font'),noRepeat:false});assert.equal(shared.pending.id,'font');assert.equal(shared.sharedRevision,10);assert.equal(C.normalizeState(shared).pending.id,'font','A remote removal must not discard an active result');
+shared.pending.deferId='persistent-defer-id';shared.history.push({id:'gone-task',title:'Отложено',kind:'task',status:'deferred'});const deferredRestored=C.normalizeState(shared);assert.equal(deferredRestored.pending.deferId,'persistent-defer-id');assert.equal(deferredRestored.history.at(-1).status,'deferred');
 assert.ok(!/(?:src|href)=["']https?:\/\//.test(html),'Unexpected external dependency');
 // Ratchet: sector crossings follow the actual easing, not a separate loop.
 for(let n=1;n<=30;n++)for(const withZero of [false,true]){
@@ -115,4 +122,4 @@ sound.setEnabled(true);clock=0;sound.startSpin([100,500]);sound.cancel();await n
 context.AudioContext=undefined;let unavailable=0;const unsupported=new Sound({onUnavailable:()=>unavailable++});assert.equal(await unsupported.unlock(),false);assert.equal(await unsupported.unlock(),false);assert.equal(unavailable,1);
 context.webkitAudioContext=FakeAudioContext;const legacy=new Sound();assert.equal(await legacy.unlock(),true);legacy.cancel();
 assert.ok(html.includes("SOUND_KEY='shtrafnaya-sound-v1'"),'Sound preference stays separate from game progress');
-console.log('PASS: 16 sectors, exact 3% zero, 4% per friend / 7.7% per task initially, weighted selection, no-repeat round completion, saved-game migration, pending zero recovery, weighted pointer geometry and sound boundaries, audio controls, offline assets, JS syntax.');
+console.log('PASS: 18 sectors, exact 3% zero, reduced friend odds, weighted selection, no-repeat round completion, saved-game migration, pending zero recovery, weighted pointer geometry and sound boundaries, audio controls, offline assets, JS syntax.');
