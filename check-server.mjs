@@ -9,6 +9,17 @@ const get=()=>worker.fetch(new Request('https://roulette.test/api/settings'),{DB
 const put=(body,headers={})=>worker.fetch(new Request('https://roulette.test/api/settings',{method:'PUT',headers:{'content-type':'application/json','origin':'https://roulette.test',...headers},body:JSON.stringify(body)}),{DB});
 try{
   const first=await get();assert.equal(first.status,200);assert.equal(first.headers.get('cache-control'),'no-store');const initial=await first.json();assert.equal(initial.items.length,18);assert.equal(initial.revision,1);
+  const quizRequest=(method='GET',body)=>worker.fetch(new Request('https://roulette.test/api/quiz',{method,headers:{'content-type':'application/json',origin:'https://roulette.test'},...(body?{body:JSON.stringify(body)}:{})}),{DB});
+  const quizFirst=await(await quizRequest()).json();assert.equal(quizFirst.questions.length,30);assert.equal(quizFirst.revision,1);
+  const quizEdit={baseRevision:1,id:quizFirst.questions[0].id,q:'Вопрос ведущего?',a:'Ответ ведущего.',accept:'Засчитать по смыслу.'};
+  const quizSaved=await quizRequest('PUT',quizEdit);assert.equal(quizSaved.status,200);assert.equal((await quizSaved.json()).questions[0].q,quizEdit.q);
+  assert.equal((await quizRequest('PUT',quizEdit)).status,409,'Stale quiz editor cannot overwrite another edit');
+  assert.equal((await quizRequest('PUT',{...quizEdit,baseRevision:2,id:'missing'})).status,400);
+  assert.equal((await quizRequest('PUT',{...quizEdit,baseRevision:2,q:' '})).status,400);
+  assert.equal((await quizRequest('PUT',{...quizEdit,baseRevision:2,a:'x'.repeat(801)})).status,400);
+  DB.close();DB=localDatabase(file);const quizRestored=await(await quizRequest()).json();assert.equal(quizRestored.questions[0].a,quizEdit.a);assert.equal(quizRestored.questions[1].q,quizFirst.questions[1].q);assert.equal(quizRestored.revision,2);
+  const quizConcurrent=await Promise.all([quizRequest('PUT',{...quizEdit,baseRevision:2,q:'Вопрос А?'}),quizRequest('PUT',{...quizEdit,baseRevision:2,q:'Вопрос Б?'})]);assert.deepEqual(quizConcurrent.map(r=>r.status).sort(),[200,409]);
+  assert.equal((await(await get()).json()).revision,1,'Editing the quiz never changes the roulette');
   const fromAnotherDevice=await(await get()).json();assert.deepEqual(fromAnotherDevice,initial);
   const custom={id:'custom-test',title:'Общее задание',short:'ОБЩЕЕ',description:'Для всех устройств',kind:'task',enabled:true};
   const payload={baseRevision:1,items:[...initial.items,custom],noRepeat:false};
@@ -28,10 +39,12 @@ try{
   const beforeOdds=await(await get()).json();
   const oddsItems=beforeOdds.items.map(i=>({...i,...(i.kind==='zero'?{chance:17}:{weight:i.kind==='friend'?13:89})}));
   assert.equal((await put({baseRevision:beforeOdds.revision,items:oddsItems,noRepeat:false})).status,200);
-  DB.close();DB=localDatabase(file);const savedOdds=await(await get()).json();assert.equal(savedOdds.items.find(i=>i.kind==='zero').chance,17);assert.equal(savedOdds.items.find(i=>i.kind==='friend').weight,13);assert.equal(savedOdds.items[0].weight,89);assert.equal(savedOdds.noRepeat,false);
+  DB.close();DB=localDatabase(file);const savedOdds=await(await get()).json();assert.equal(savedOdds.items.find(i=>i.kind==='zero').chance,undefined);assert.equal(savedOdds.items.find(i=>i.kind==='friend').weight,13);assert.equal(savedOdds.items[0].weight,89);assert.equal(savedOdds.noRepeat,false);
   for(const value of [0,101,1.5,'99']){const bad=savedOdds.items.map(i=>({...i}));bad[0].weight=value;assert.equal((await put({baseRevision:savedOdds.revision,items:bad,noRepeat:true})).status,400);}
-  const badZero=savedOdds.items.map(i=>i.kind==='zero'?{...i,chance:100}:i);assert.equal((await put({baseRevision:savedOdds.revision,items:badZero,noRepeat:true})).status,400);
   assert.equal((await(await get()).json()).revision,savedOdds.revision,'Invalid edits must not change persisted settings');
+  const injected=savedOdds.items.map(i=>i.kind==='zero'?{...i,chance:100}:i);const sanitized=await put({baseRevision:savedOdds.revision,items:injected,noRepeat:true});assert.equal(sanitized.status,200);assert.equal((await sanitized.json()).items.find(i=>i.kind==='zero').chance,undefined);
+  for(const route of ['/quiz','/quiz/','/quiz.html']){const response=await worker.fetch(new Request('https://roulette.test'+route),{DB});assert.equal(response.status,200);const body=await response.text();assert.ok(body.includes('ds-10'));assert.ok(!body.includes('/*__QUESTIONS__*/'));}
+  const shoe=await worker.fetch(new Request('https://roulette.test/assets/anime-shoe.webp'),{DB});assert.equal(shoe.headers.get('content-type'),'image/webp');assert.ok((await shoe.arrayBuffer()).byteLength>1000);
   const deferredRequest=(method,path='/api/deferred',body)=>worker.fetch(new Request('https://roulette.test'+path,{method,headers:{'content-type':'application/json','origin':'https://roulette.test'},...(body?{body:JSON.stringify(body)}:{})}),{DB});
   const deferredItem={id:'test-deferred-1',title:'Пиво выбирают пацаны',description:'Выполнить в заведении.',kind:'task'};
   assert.equal((await deferredRequest('POST','/api/deferred',deferredItem)).status,200);

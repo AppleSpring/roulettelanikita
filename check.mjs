@@ -19,24 +19,25 @@ assert.equal(zero.id,'zero');
 assert.ok(zero.description.includes('Выполняют все пятеро'));
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-10,`${a} != ${b}`);
 const initial=C.sectorLayout(state.items);
-for(const s of initial)close(s.chance,s.item.kind==='zero'?.03:s.item.kind==='friend'?(97*40/112400):(97*77/112400));
+for(const s of initial)close(s.chance,s.item.kind==='zero'?.015:s.item.kind==='friend'?(98.5*40/112400):(98.5*77/112400));
 close(initial.reduce((sum,s)=>sum+s.chance,0),1);
 assert.equal(initial.at(-1).end,360);
 const fake=(...values)=>({getRandomValues(a){assert.ok(values.length,'Unexpected random draw');a[0]=values.shift();return a;}});
-// Edited probabilities must drive selection and geometry identically, including extremes.
-for(const percent of [1,25,99]){
-  const custom=[{...state.items[0],weight:1},{...state.items[2],weight:99},{...zero,chance:percent}];
-  for(let gate=0;gate<100;gate++)assert.equal(custom[C.pickWeightedIndex(custom,fake(gate,0))].kind==='zero',gate<percent);
-  const layout=C.sectorLayout(custom);close(layout[0].chance,(1-percent/100)/100);close(layout[1].chance,(1-percent/100)*.99);close(layout[2].chance,percent/100);
+// Hardcoded schedule cannot be overridden by imported/legacy chance settings.
+for(const spin of [1,9,10,11,19,20,21,100,101]){
+  const percent=spin%10===0?20:1.5;
+  const custom=[{...state.items[0],weight:1},{...state.items[2],weight:99},{...zero,chance:99}];
+  for(let gate=0;gate<1000;gate++)assert.equal(custom[C.pickWeightedIndex(custom,fake(gate,0),spin)].kind==='zero',gate<percent*10);
+  const layout=C.sectorLayout(custom,spin);close(layout[0].chance,(1-percent/100)/100);close(layout[1].chance,(1-percent/100)*.99);close(layout[2].chance,percent/100);
   for(let index=0;index<3;index++)assert.equal(C.indexAtPointer(C.rotationForIndex(index,layout),layout),index);
-  for(let ticket=0;ticket<100;ticket++)assert.equal(C.pickWeightedIndex(custom,fake(99,ticket)),ticket===0?0:1);
-  const saved=C.normalizeState({...C.newState(),items:custom});assert.equal(saved.items[0].weight,1);assert.equal(saved.items[1].weight,99);assert.equal(saved.items[2].chance,percent);
+  for(let ticket=0;ticket<100;ticket++)assert.equal(C.pickWeightedIndex(custom,fake(999,ticket),spin),ticket===0?0:1);
+  const saved=C.normalizeState({...C.newState(),items:custom});assert.equal(saved.items[0].weight,1);assert.equal(saved.items[1].weight,99);assert.equal(saved.items[2].chance,undefined);
 }
 for(const value of [0,101,1.5,'40',null])assert.notEqual(C.validateItems([{...state.items[0],weight:value}]),'');
-for(const value of [0,100,1.5,'3',null])assert.notEqual(C.validateItems([state.items[0],{...zero,chance:value}]),'');
+for(const value of [0,100,1.5,'3',null])assert.equal(C.normalizeState({...C.newState(),items:[state.items[0],{...zero,chance:value}]}).items[1].chance,undefined);
 assert.notEqual(C.validateItems([state.items[0],state.items[0]]),'');
-// Enumerate every gate value: exactly three of 100 draws select zero.
-for(let gate=0;gate<100;gate++)assert.equal(state.items[C.pickWeightedIndex(state.items,fake(gate,0))].kind==='zero',gate<3);
+// Enumerate every gate value: exactly 15 of 1000 draws select zero.
+for(let gate=0;gate<1000;gate++)assert.equal(state.items[C.pickWeightedIndex(state.items,fake(gate,0))].kind==='zero',gate<15);
 // Enumerate every non-zero ticket: each friend gets 40, each task 77 (1124 tickets total).
 const tickets=Array(18).fill(0);
 for(let ticket=0;ticket<1124;ticket++)tickets[C.pickWeightedIndex(state.items,fake(99,ticket))]++;
@@ -52,8 +53,8 @@ for(let n=1;n<=30;n++){
   assert.equal(C.indexAtPointer(target,segments),index,`Pointer mismatch n=${pool.length} index=${index}`);
  }
  if(pool.includes(zero)){
-  close(segments.at(-1).chance,.03);
-  for(let gate=0;gate<100;gate++)assert.equal(pool[C.pickWeightedIndex(pool,fake(gate,0))].kind==='zero',gate<3);
+  close(segments.at(-1).chance,.015);
+  for(let gate=0;gate<1000;gate++)assert.equal(pool[C.pickWeightedIndex(pool,fake(gate,0))].kind==='zero',gate<15);
  }
  }
 }
@@ -72,7 +73,7 @@ const restored=C.normalizeState(JSON.parse(JSON.stringify(state)));assert.equal(
 const pending=C.newState();pending.pending={...pending.items[0],number:1};const p=C.normalizeState(pending);assert.equal(p.pending.id,p.items[0].id);assert.ok(p.used.includes(p.items[0].id));
 const old={version:1,items:withoutZero.map(i=>({...i})),used:['wallpaper'],noRepeat:false,history:[{id:'wallpaper',title:'Моя заставка',kind:'task',status:'done'}],pending:{...withoutZero[2],number:2}};
 old.items[0].title='Моя заставка';old.items[1].enabled=false;
-const upgraded=C.normalizeState(old);assert.equal(upgraded.version,3);assert.equal(upgraded.items.length,18);assert.equal(upgraded.items[0].title,'Моя заставка');assert.equal(upgraded.items[1].enabled,false);assert.equal(upgraded.noRepeat,false);assert.equal(upgraded.history[0].title,'Моя заставка');assert.equal(upgraded.pending.id,'tolik');assert.equal(C.normalizeState(upgraded).items.length,18,'No duplicate zero on reload');
+const upgraded=C.normalizeState(old);assert.equal(upgraded.version,4);assert.equal(upgraded.items.length,18);assert.equal(upgraded.items[0].title,'Моя заставка');assert.equal(upgraded.items[1].enabled,false);assert.equal(upgraded.noRepeat,false);assert.equal(upgraded.history[0].title,'Моя заставка');assert.equal(upgraded.pending.id,'tolik');assert.equal(C.normalizeState(upgraded).items.length,18,'No duplicate zero on reload');
 const zeroPending=C.newState();zeroPending.pending={...zero,number:1};const zp=C.normalizeState(zeroPending);assert.equal(zp.pending.kind,'zero');assert.equal(zp.used.length,0);assert.ok(C.remainingItems(zp).some(i=>i.id==='zero'));
 zp.history.push({id:zero.id,title:zero.title,kind:zero.kind,status:'done'});zp.pending=null;assert.equal(C.normalizeState(zp).history[0].kind,'zero');assert.equal(C.remainingItems(zp).length,18,'Zero does not consume a normal sector');
 const removed=C.newState();removed.items=removed.items.filter(i=>i.kind!=='zero');assert.equal(C.normalizeState(removed).items.length,17,'Explicitly removed zero stays removed');
@@ -134,4 +135,10 @@ sound.setEnabled(true);clock=0;sound.startSpin([100,500]);sound.cancel();await n
 context.AudioContext=undefined;let unavailable=0;const unsupported=new Sound({onUnavailable:()=>unavailable++});assert.equal(await unsupported.unlock(),false);assert.equal(await unsupported.unlock(),false);assert.equal(unavailable,1);
 context.webkitAudioContext=FakeAudioContext;const legacy=new Sound();assert.equal(await legacy.unlock(),true);legacy.cancel();
 assert.ok(html.includes("SOUND_KEY='shtrafnaya-sound-v1'"),'Sound preference stays separate from game progress');
-console.log('PASS: 18 sectors, exact 3% zero, reduced friend odds, weighted selection, no-repeat round completion, saved-game migration, pending zero recovery, weighted pointer geometry and sound boundaries, audio controls, offline assets, JS syntax.');
+console.log('PASS: 18 sectors, fixed 1.5% zero and 20% each tenth spin, reduced friend odds, weighted selection, no-repeat round completion, saved-game migration, pending zero recovery, weighted pointer geometry and sound boundaries, audio controls, offline assets, JS syntax.');
+
+const counted=C.newState();counted.spinCount=19;assert.equal(C.normalizeState(counted).spinCount,19);assert.equal(C.zeroChance(C.normalizeState(counted).spinCount+1),20);
+const legacyCount={...C.newState(),version:3,spinCount:undefined,history:Array.from({length:8},()=>({id:'font',kind:'task',title:'Font'})),pending:{...C.defaults()[0],number:9}};assert.equal(C.normalizeState(legacyCount).spinCount,9);
+assert.equal(C.zeroChance(C.normalizeState(legacyCount).spinCount+1),20);
+assert.ok(!html.includes('id="taskLegend"'));assert.ok(!html.includes('Шанс зеро, % (1–99)'));
+assert.ok(html.includes('state.spinCount=spinNumber'));assert.ok(!html.match(/function resetRound\(\)\{[^}]*spinCount=/));

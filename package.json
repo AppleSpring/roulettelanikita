@@ -6,7 +6,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "start": "node server.mjs",
-    "check": "node check.mjs && node check-server.mjs",
+    "check": "node check.mjs && node check-server.mjs && node check-quiz.mjs",
     "db:generate": "drizzle-kit generate"
   },
   "devDependencies": {

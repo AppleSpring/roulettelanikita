@@ -1,0 +1,6 @@
+Tool: built-in image_gen.imagegen; mode: generate; transparent_background: true.
+Original: assets/anime-shoe-original.png
+Web asset: dist/assets/anime-shoe.webp (160 px, alpha preserved; mechanically resized and compressed with Sharp).
+
+Prompt:
+Use case: logo-brand. Create a single small women's high-heeled pump shoe as an anime-style illustrated icon for a Russian bachelor-party roulette web app. It will REPLACE the current circular arrow symbol next to the word ШТРАФНАЯ, but generate ONLY THE SHOE, no lettering and no surrounding circle. Crisp hand-drawn anime cel shading, strong clean silhouette, thick dark outline, playful and stylish, not photorealistic. Side profile at a slight three-quarter angle, toe points left and high heel on the right. Lime-green upper (#d7f38c) with warm cream highlights and a tiny lavender accent, designed to read clearly on a very dark green-black background (#151714) at 36–44 pixels. Actual transparent background, square composition, shoe fills most of the canvas with a narrow transparent margin. One shoe only; no foot, legs, person, text, logo, sparkles, shadows outside the shoe, or background.
