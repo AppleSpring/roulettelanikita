@@ -425,7 +425,7 @@
     $('undoRemove').onclick=()=>{if(!removedItem)return;if(draft.length>=31||draft.some(i=>i.id===removedItem.item.id)){$('editorError').textContent='Не удалось вернуть: список полон или этот сектор уже есть.';return;}draft.splice(Math.min(removedItem.index,draft.length),0,removedItem.item);removedItem=null;renderEditor();};
     $('defaultsButton').onclick=()=>confirmChange('Вернуть исходный список?','Тексты и шансы в черновике заменятся исходными. У остальных список изменится только после сохранения.','ВЕРНУТЬ ИСХОДНЫЕ',()=>{draft=C.defaults();$('repeatInput').checked=false;removedItem=null;renderEditor();$('editorError').textContent='Исходный список загружен. Сохрани, чтобы применить для всех.';});
     const cleanDraft=()=>draft.map(i=>({...i,title:i.title.trim(),short:String(i.short||i.title).trim().slice(0,20),description:i.description.trim()}));
-    $('settingsForm').addEventListener('invalid',e=>{const details=e.target.closest('details');if(details)details.open=true;},true);
+    $('settingsForm').addEventListener('invalid',e=>{if(e.target.closest('.edit-item')?.hidden){$('sectorSearch').value='';filterEditor();}const details=e.target.closest('details');if(details)details.open=true;},true);
     $('settingsForm').onsubmit=e=>{e.preventDefault();if(savingShared||!draftRevision)return;const clean=cleanDraft(),error=C.validateItems(clean);if(error){$('editorError').textContent=error;return;}saveSharedSettings(clean,!$('repeatInput').checked);};
     $('exportSettings').onclick=()=>{
       const items=cleanDraft(),error=C.validateItems(items);if(error){$('editorError').textContent=error;return;}
