@@ -21,11 +21,12 @@ try{
   const quizConcurrent=await Promise.all([quizRequest('PUT',{...quizEdit,baseRevision:2,q:'Вопрос А?'}),quizRequest('PUT',{...quizEdit,baseRevision:2,q:'Вопрос Б?'})]);assert.deepEqual(quizConcurrent.map(r=>r.status).sort(),[200,409]);
   assert.equal((await(await get()).json()).revision,1,'Editing the quiz never changes the roulette');
   const fromAnotherDevice=await(await get()).json();assert.deepEqual(fromAnotherDevice,initial);
-  const custom={id:'custom-test',title:'Общее задание',short:'ОБЩЕЕ',description:'Для всех устройств',kind:'task',enabled:true};
+  const custom={id:'custom-test',title:'Общее задание',short:'ДЛИННАЯ ПОДПИСЬ ДЛЯ ОБЩЕГО КОЛЕСА',description:'Для всех устройств',kind:'task',enabled:true};
   const payload={baseRevision:1,items:[...initial.items,custom],noRepeat:false};
   const saved=await put(payload);assert.equal(saved.status,200);const updated=await saved.json();assert.equal(updated.revision,2);
   assert.equal((await put({...payload,items:initial.items})).status,409,'Stale editors must not overwrite newer data');
   const read=await(await get()).json();assert.equal(read.items.at(-1).id,'custom-test');assert.equal(read.noRepeat,false);
+  assert.equal(read.items.at(-1).short,custom.short,'Keep the full label on every device');
   // Close and reopen the database: the list must survive a process restart.
   DB.close();DB=localDatabase(file);assert.deepEqual(await(await get()).json(),read);
   const changed=read.items.map(i=>i.id==='custom-test'?{...i,title:'Изменено со второго устройства'}:i);

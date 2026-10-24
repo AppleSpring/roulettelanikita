@@ -17,7 +17,7 @@ function cleanSettings(body) {
     if(!item||typeof item.id!=='string'||!/^[a-zA-Z0-9_-]{1,90}$/.test(item.id)||ids.has(item.id)||!['task','friend','zero'].includes(item.kind)||typeof item.enabled!=='boolean')return null;
     if((item.kind==='zero')!==(item.id==='zero'))return null;
     if(typeof item.title!=='string'||typeof item.description!=='string'||item.title.length>70||item.description.length>900)return null;
-    ids.add(item.id);items.push({id:item.id,title:item.title.trim(),short:String(item.short||item.title).slice(0,20),description:item.description.trim(),kind:item.kind,enabled:item.enabled,...(item.kind==='zero'?{}:{weight:C.weight(item)})});
+    ids.add(item.id);items.push({id:item.id,title:item.title.trim(),short:String(item.short||item.title).slice(0,70),description:item.description.trim(),kind:item.kind,enabled:item.enabled,...(item.kind==='zero'?{}:{weight:C.weight(item)})});
   }
   if(C.validateItems(items))return null;
   return {items,noRepeat:body.noRepeat};

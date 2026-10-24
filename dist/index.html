@@ -118,6 +118,45 @@
       const zero=items.find(i=>i.kind==='zero'),zeroShare=zero?zeroChance(spinNumber)/100:0,ordinaryShare=1-zeroShare;let start=0;
       return items.map((item,index)=>{const chance=item.kind==='zero'?zeroShare:ordinaryShare*weight(item)/total;const end=index===items.length-1?360:start+360*chance;const segment={item,start,end,chance};start=end;return segment;});
     }
+    // Fit measured text inside the wedge, outside the hub and inside the rim.
+    // The visual layout never changes the sector angles or their probabilities.
+    function wheelLabel(item){
+      const title=item.title.trim().toUpperCase(),short=String(item.short||'').trim().toUpperCase();
+      // Recover labels that the previous editor automatically cut at 20 characters.
+      return (!short||(short.length===20&&title.startsWith(short)))?title:short;
+    }
+    function fitWheelLabel(label,degrees,measure){
+      const text=label.replace(/\s+/g,' ').trim(),words=text.split(' ');
+      const layouts=[[text]];
+      for(let a=1;a<words.length;a++){
+        layouts.push([words.slice(0,a).join(' '),words.slice(a).join(' ')]);
+        for(let b=a+1;b<words.length;b++)layouts.push([words.slice(0,a).join(' '),words.slice(a,b).join(' '),words.slice(b).join(' ')]);
+      }
+      const maxFont=degrees>=60?26:degrees>=28?23:20;
+      const tangent=Math.tan(Math.min(89,degrees/2)*Math.PI/180);
+      function fit(lines,size){
+        const lineHeight=size*1.12,widths=lines.map(line=>measure(line,size));
+        let lo=0,hi=Infinity;
+        lines.forEach((_,i)=>{
+          const edge=Math.abs((i-(lines.length-1)/2)*lineHeight)+size*.58;
+          const left=Math.max(84,(edge+3)/tangent);
+          const right=Math.sqrt(Math.max(0,280*280-edge*edge));
+          lo=Math.max(lo,left+widths[i]/2);hi=Math.min(hi,right-widths[i]/2);
+        });
+        if(lo>hi)return null;
+        return{lines,size,lineHeight,radius:Math.max(lo,Math.min(188,hi)),widths,full:true};
+      }
+      for(let size=maxFont;size>=14;size-=.5){
+        const candidates=layouts.map(lines=>fit(lines,size)).filter(Boolean);
+        if(candidates.length)return candidates.sort((a,b)=>a.lines.length-b.lines.length||Math.max(...a.widths)-Math.max(...b.widths))[0];
+      }
+      // Exceptionally long labels / very low custom weights: keep a readable prefix.
+      for(let length=text.length-1;length>=1;length--){
+        const fitted=fit([text.slice(0,length).trimEnd()+'…'],14);
+        if(fitted)return{...fitted,full:false};
+      }
+      return null;
+    }
     function rotationForIndex(index,segments,current=0,turns=6){const s=segments[index];const target=((360-(s.start+s.end)/2)%360+360)%360;const normalized=((current%360)+360)%360;return current+turns*360+((target-normalized+360)%360);}
     function indexAtPointer(rotation,segments){const angle=((-rotation%360)+360)%360;const index=segments.findIndex(s=>angle>=s.start&&angle<s.end);return index<0?segments.length-1:index;}
     // Invert the same cubic-bezier(.12,.68,.12,1) used by the wheel.
@@ -144,7 +183,7 @@
         if(!i||typeof i.id!=='string'||!/^[a-zA-Z0-9_-]{1,90}$/.test(i.id)||ids.has(i.id)||!['task','friend','zero'].includes(i.kind)||(i.kind==='zero')!==(i.id==='zero')||typeof i.enabled!=='boolean')return'Проверь типы секторов: допустимы штраф, имя и одно зеро.';
         ids.add(i.id);
         if(typeof i.title!=='string'||!i.title.trim()||i.title.length>70||typeof i.description!=='string'||!i.description.trim()||i.description.length>900)return'Заполни название (до 70 знаков) и описание (до 900) каждого сектора.';
-        if(i.short!==undefined&&(typeof i.short!=='string'||i.short.length>20))return'Подпись на колесе — до 20 знаков.';
+        if(i.short!==undefined&&(typeof i.short!=='string'||i.short.length>70))return'Подпись на колесе — до 70 знаков.';
         if(i.kind!=='zero'&&i.weight!==undefined&&(!Number.isInteger(i.weight)||i.weight<1||i.weight>100))return'Частота выпадения — целое число от 1 до 100.';
       }
       if(!items.some(i=>i.enabled&&i.kind!=='zero'))return'Включи хотя бы один штраф или имя.';return'';
@@ -152,7 +191,7 @@
     function normalizeState(raw){
       if(!raw||![1,2,3,4].includes(raw.version)||!Array.isArray(raw.items))return newState();
       const kind=i=>i.id==='zero'&&i.kind==='zero'?'zero':i.kind==='friend'?'friend':'task',ids=new Set();
-      const items=raw.items.slice(0,31).filter(i=>i&&typeof i.id==='string'&&typeof i.title==='string'&&typeof i.description==='string').map(i=>({id:i.id.slice(0,90),title:i.title.slice(0,70),short:String(i.short||i.title).slice(0,20),description:i.description.slice(0,900),kind:kind(i),enabled:i.enabled!==false,...(kind(i)==='zero'?{}:{weight:weight(i)})})).filter(i=>{if(ids.has(i.id))return false;ids.add(i.id);return true;});
+      const items=raw.items.slice(0,31).filter(i=>i&&typeof i.id==='string'&&typeof i.title==='string'&&typeof i.description==='string').map(i=>({id:i.id.slice(0,90),title:i.title.slice(0,70),short:String(i.short||i.title).slice(0,70),description:i.description.slice(0,900),kind:kind(i),enabled:i.enabled!==false,...(kind(i)==='zero'?{}:{weight:weight(i)})})).filter(i=>{if(ids.has(i.id))return false;ids.add(i.id);return true;});
       if(validateItems(items))return newState();
       // Upgrade existing games without replacing edited tasks or losing their result/history.
       if(raw.version===1&&!ids.has('zero')&&items.length<31){items.push({...ZERO});ids.add('zero');}
@@ -172,7 +211,7 @@
     function applyShared(state,shared){
       return{...state,version:4,items:shared.items.map(({chance,...i})=>({...i})),noRepeat:shared.noRepeat,sharedRevision:shared.revision};
     }
-    root.RouletteCore={defaults,weight,zeroChance,pickIndex,pickWeightedIndex,sectorLayout,rotationForIndex,indexAtPointer,spinTickTimes,activeItems,remainingItems,newState,validateItems,normalizeState,applyShared};
+    root.RouletteCore={defaults,weight,zeroChance,pickIndex,pickWeightedIndex,sectorLayout,wheelLabel,fitWheelLabel,rotationForIndex,indexAtPointer,spinTickTimes,activeItems,remainingItems,newState,validateItems,normalizeState,applyShared};
   })(globalThis);
   </script>
   <script id="roulette-audio">
@@ -345,9 +384,31 @@
     window.addEventListener('beforeunload',e=>{if($('settingsDialog').open&&editorDirty()){e.preventDefault();e.returnValue='';}});
     document.querySelectorAll('.close-dialog').forEach(b=>b.addEventListener('click',()=>closeDialog(b.closest('dialog'))));
     function svgNode(name,attrs,text){const n=document.createElementNS('http://www.w3.org/2000/svg',name);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);if(text!==undefined)n.textContent=text;return n;}
-    function drawWheel(items){const svg=$('wheel');svg.replaceChildren();svg.style.transition='none';svg.style.transform='rotate(0deg)';rotation=0;const n=items.length||1,r=292,segments=C.sectorLayout(items,state.pending?.number||state.spinCount+1);const point=a=>[300+r*Math.cos(a*Math.PI/180),300+r*Math.sin(a*Math.PI/180)];if(!items.length){svg.append(svgNode('circle',{cx:300,cy:300,r,fill:'#282e23',stroke:'#414a37'}));svg.append(svgNode('text',{x:300,y:170,'text-anchor':'middle',fill:'#a6ad9c','font-size':18,'font-family':'Arial'},'КРУГ ЗАКОНЧЕН'));}
-      segments.forEach((segment,i)=>{const {item}=segment,start=-90+segment.start,end=-90+segment.end,step=segment.end-segment.start,[x1,y1]=point(start),[x2,y2]=point(end);const fill=item.kind==='zero'?'#b8a0ff':item.kind==='friend'?'#ff9b6b':(i%2?'#c9e783':'#d7f38c');const path=n===1?null:`M300 300 L${x1} ${y1} A${r} ${r} 0 ${step>180?1:0} 1 ${x2} ${y2} Z`;svg.append(svgNode(n===1?'circle':'path',n===1?{cx:300,cy:300,r,fill}:{d:path,fill,stroke:'#151714','stroke-width':2}));if(step<4)return;const angle=start+step/2,rad=angle*Math.PI/180;let label=item.short||item.title.toUpperCase();const max=n>20?10:16;if(label.length>max)label=label.slice(0,max-1)+'…';const tx=300+184*Math.cos(rad),ty=300+184*Math.sin(rad);const flip=angle>90&&angle<270?180:0;svg.append(svgNode('text',{x:tx,y:ty,transform:`rotate(${angle+flip} ${tx} ${ty})`,'text-anchor':'middle','dominant-baseline':'middle','font-family':'Arial, Helvetica, sans-serif','font-weight':800,'font-size':n>20?12:14,'letter-spacing':.4,fill:'#21271b'},label));});
-      svg.setAttribute('aria-label',`Колесо: ${items.map(i=>i.title).join(', ')}`);$('hubCount').textContent=items.length;}
+    const labelCanvas=document.createElement('canvas'),labelContext=labelCanvas.getContext('2d');
+    const measureLabel=(text,size)=>{labelContext.font='800 '+size+'px Arial, Helvetica, sans-serif';return labelContext.measureText(text).width;};
+    function drawWheel(items){
+      const svg=$('wheel');svg.replaceChildren();svg.style.transition='none';svg.style.transform='rotate(0deg)';rotation=0;
+      const r=292,segments=C.sectorLayout(items,state.pending?.number||state.spinCount+1);
+      const point=a=>[300+r*Math.cos(a*Math.PI/180),300+r*Math.sin(a*Math.PI/180)];
+      if(!items.length){svg.append(svgNode('circle',{cx:300,cy:300,r,fill:'#282e23',stroke:'#414a37'}));svg.append(svgNode('text',{x:300,y:170,'text-anchor':'middle',fill:'#a6ad9c','font-size':18,'font-family':'Arial'},'КРУГ ЗАКОНЧЕН'));}
+      segments.forEach((segment,i)=>{
+        const {item}=segment,start=-90+segment.start,end=-90+segment.end,step=end-start,[x1,y1]=point(start),[x2,y2]=point(end);
+        const fill=item.kind==='zero'?'#b8a0ff':item.kind==='friend'?'#ff9b6b':i%2?'#c9e783':'#d7f38c';
+        const group=svgNode('g',{'data-sector':item.id});
+        group.append(svgNode('title',{},C.wheelLabel(item)));
+        group.append(svgNode(items.length===1?'circle':'path',items.length===1?{cx:300,cy:300,r,fill}:{d:'M300 300 L'+x1+' '+y1+' A'+r+' '+r+' 0 '+(step>180?1:0)+' 1 '+x2+' '+y2+' Z',fill,stroke:'#151714','stroke-width':2}));
+        const layout=C.fitWheelLabel(C.wheelLabel(item),step,measureLabel);
+        if(layout){
+          const angle=items.length===1?-90:start+step/2,rad=angle*Math.PI/180,tx=300+layout.radius*Math.cos(rad),ty=300+layout.radius*Math.sin(rad);
+          const flip=angle>90&&angle<270?180:0;
+          const text=svgNode('text',{x:tx,y:ty,transform:'rotate('+(items.length===1?0:angle+flip)+' '+tx+' '+ty+')','text-anchor':'middle','dominant-baseline':'central','font-family':'Arial, Helvetica, sans-serif','font-weight':800,'font-size':layout.size,fill:'#21271b','data-full':layout.full,'data-degrees':step,'data-radius':layout.radius});
+          layout.lines.forEach((line,lineIndex)=>text.append(svgNode('tspan',{x:tx,y:ty+(lineIndex-(layout.lines.length-1)/2)*layout.lineHeight},line)));
+          group.append(text);
+        }
+        svg.append(group);
+      });
+      svg.setAttribute('aria-label','Колесо: '+items.map(i=>i.title).join(', '));$('hubCount').textContent=items.length;
+    }
     function updateUI(redraw=true){
       const active=C.activeItems(state).filter(i=>i.kind!=='zero'),remaining=C.remainingItems(state);if(redraw)drawWheel(remaining);
       const usedCount=active.filter(i=>state.used.includes(i.id)).length;$('progressCount').textContent=String(usedCount).padStart(2,'0')+' / '+String(active.length).padStart(2,'0');
@@ -399,10 +460,10 @@
         const top=document.createElement('div');top.className='edit-top';const enableLabel=document.createElement('label');enableLabel.className='enable-label';const check=document.createElement('input');check.type='checkbox';check.className='item-enabled';check.checked=item.enabled;check.setAttribute('aria-label','Включить сектор '+item.title);check.onchange=()=>{item.enabled=check.checked;updateEditorChances();};enableLabel.append(check,document.createTextNode('В игре'));
         const chance=document.createElement('span');chance.className='sector-chance';chance.dataset.id=item.id;
         const remove=document.createElement('button');remove.type='button';remove.className='remove-item';remove.textContent='×';remove.setAttribute('aria-label','Удалить сектор '+item.title);remove.onclick=()=>{removedItem={item:{...item},index};draft.splice(index,1);renderEditor();toast('Сектор убран из черновика. Его можно вернуть внизу списка.');};top.append(enableLabel,chance,remove);
-        const title=input(item.title,70),description=document.createElement('textarea');title.oninput=()=>{if(!item.short||item.short===item.title.toUpperCase().slice(0,20)){item.short=title.value.toUpperCase().slice(0,20);short.value=item.short;}item.title=title.value;check.setAttribute('aria-label','Включить сектор '+item.title);remove.setAttribute('aria-label','Удалить сектор '+item.title);};description.value=item.description;description.maxLength=900;description.oninput=()=>item.description=description.value;
+        const title=input(item.title,70),description=document.createElement('textarea');title.oninput=()=>{if(!item.short||item.short===item.title.toUpperCase().slice(0,20)||item.short===item.title.toUpperCase()){item.short=title.value.toUpperCase().slice(0,70);short.value=item.short;}item.title=title.value;check.setAttribute('aria-label','Включить сектор '+item.title);remove.setAttribute('aria-label','Удалить сектор '+item.title);};description.value=item.description;description.maxLength=900;description.oninput=()=>item.description=description.value;
         card.append(top,field('Название',title),field('Что нужно сделать',description));
         const details=document.createElement('details'),summary=document.createElement('summary');details.className='edit-advanced';details.open=expanded.has(item.id);summary.textContent='Шанс, тип и подпись';details.append(summary);const fields=document.createElement('div');fields.className='edit-fields';
-        const short=input(item.short||'',20);short.oninput=()=>item.short=short.value;fields.append(field('Подпись на колесе',short));
+        const short=input(item.short||'',70);short.oninput=()=>item.short=short.value;fields.append(field('Подпись на колесе',short));
         if(item.kind!=='zero'){
           const kind=document.createElement('select');for(const [value,text]of [['task','Штраф'],['friend','Имя друга']]){const option=document.createElement('option');option.value=value;option.textContent=text;kind.append(option);}kind.value=item.kind;kind.onchange=()=>{item.kind=kind.value;item.weight=kind.value==='friend'?40:77;renderEditor();};fields.append(field('Тип сектора',kind));
         }
@@ -424,7 +485,7 @@
     $('addItemButton').onclick=()=>addSector('task');$('addFriendButton').onclick=()=>addSector('friend');$('addZeroButton').onclick=()=>addSector('zero');
     $('undoRemove').onclick=()=>{if(!removedItem)return;if(draft.length>=31||draft.some(i=>i.id===removedItem.item.id)){$('editorError').textContent='Не удалось вернуть: список полон или этот сектор уже есть.';return;}draft.splice(Math.min(removedItem.index,draft.length),0,removedItem.item);removedItem=null;renderEditor();};
     $('defaultsButton').onclick=()=>confirmChange('Вернуть исходный список?','Тексты и шансы в черновике заменятся исходными. У остальных список изменится только после сохранения.','ВЕРНУТЬ ИСХОДНЫЕ',()=>{draft=C.defaults();$('repeatInput').checked=false;removedItem=null;renderEditor();$('editorError').textContent='Исходный список загружен. Сохрани, чтобы применить для всех.';});
-    const cleanDraft=()=>draft.map(i=>({...i,title:i.title.trim(),short:String(i.short||i.title).trim().slice(0,20),description:i.description.trim()}));
+    const cleanDraft=()=>draft.map(i=>({...i,title:i.title.trim(),short:String(i.short||i.title).trim().slice(0,70),description:i.description.trim()}));
     $('settingsForm').addEventListener('invalid',e=>{if(e.target.closest('.edit-item')?.hidden){$('sectorSearch').value='';filterEditor();}const details=e.target.closest('details');if(details)details.open=true;},true);
     $('settingsForm').onsubmit=e=>{e.preventDefault();if(savingShared||!draftRevision)return;const clean=cleanDraft(),error=C.validateItems(clean);if(error){$('editorError').textContent=error;return;}saveSharedSettings(clean,!$('repeatInput').checked);};
     $('exportSettings').onclick=()=>{
@@ -435,7 +496,7 @@
     $('importFile').onchange=async e=>{
       const file=e.target.files[0];e.target.value='';if(!file)return;
       try{if(file.size>65536)throw Error('Файл слишком большой. Нужна копия списка до 64 КБ.');const data=JSON.parse(await file.text());if(data.format!=='shtrafnaya-settings'||data.version!==1||typeof data.noRepeat!=='boolean')throw Error('Выбери JSON-файл, скачанный из настроек рулетки.');const error=C.validateItems(data.items);if(error)throw Error(error);if(!$('settingsDialog').open||savingShared)return;
-        confirmChange('Загрузить список из файла?','Черновик будет заменен. У остальных список изменится только после сохранения.','ЗАГРУЗИТЬ СПИСОК',()=>{draft=data.items.map(i=>({id:i.id,title:i.title,short:i.short||i.title.slice(0,20),description:i.description,kind:i.kind,enabled:i.enabled,...(i.kind==='zero'?{}:{weight:C.weight(i)})}));$('repeatInput').checked=!data.noRepeat;removedItem=null;renderEditor();$('editorError').textContent='Список загружен из файла. Сохрани, чтобы применить для всех.';});
+        confirmChange('Загрузить список из файла?','Черновик будет заменен. У остальных список изменится только после сохранения.','ЗАГРУЗИТЬ СПИСОК',()=>{draft=data.items.map(i=>({id:i.id,title:i.title,short:i.short||i.title.slice(0,70),description:i.description,kind:i.kind,enabled:i.enabled,...(i.kind==='zero'?{}:{weight:C.weight(i)})}));$('repeatInput').checked=!data.noRepeat;removedItem=null;renderEditor();$('editorError').textContent='Список загружен из файла. Сохрани, чтобы применить для всех.';});
       }catch(error){$('editorError').textContent=error instanceof SyntaxError?'Не удалось прочитать JSON. Выбери файл резервной копии.':error.message;}
     };
     $('reloadSettings').onclick=()=>{if(savingShared)return;if(!draftRevision){loadEditor();return;}confirmAction=()=>loadEditor();$('confirmTitle').textContent='Загрузить свежий список?';$('confirmText').textContent='Несохраненные правки в этой форме заменятся последней версией с сервера.';$('confirmYes').textContent='ЗАГРУЗИТЬ';openDialog($('confirmDialog'));};

@@ -9,7 +9,38 @@ scripts.forEach(code=>new vm.Script(code));
 const context=vm.createContext({crypto:webcrypto});
 vm.runInContext(scripts[0],context);
 const C=context.RouletteCore;
+// Label fitting is geometric, independent of random selection and sector count.
+const measure=(text,size)=>Array.from(text).reduce((width,c)=>width+(c===' '?.3:.68)*size,0);
+const labelCases=['КОМПЕНСАЦИЯ','БОЛЬШОЙ ШРИФТ','ЛУЧШИЙ КУСОК','ХОЗЯИН В ДОМЕ','ЛЕГЕНДАРНЫЙ ТОСТ','НЕ ВАЖНО ЧТО ПИЩАТ КРЫСЫ ЗА СПИНОЙ У КИСЫ'];
+assert.equal(C.wheelLabel({title:'Не важно что пищат крысы за спиной у кисы',short:'НЕ ВАЖНО ЧТО ПИЩАТ К'}),'НЕ ВАЖНО ЧТО ПИЩАТ КРЫСЫ ЗА СПИНОЙ У КИСЫ');
+assert.equal(C.wheelLabel({title:'Незнакомка',short:'НЕ ТОЙ РУКОЙ'}),'НЕ ТОЙ РУКОЙ','Keep intentionally customized labels');
+let layoutsChecked=0;
+for(const count of [1,2,3,5,10,18,23,31])for(const spin of [1,10]){
+  const items=Array.from({length:count},(_,i)=>({id:'label-'+i,title:labelCases[i%labelCases.length],short:labelCases[i%labelCases.length],kind:i%4===0?'friend':'task',weight:i%4===0?40:77}));
+  if(count>1)items[count-1]={id:'zero',kind:'zero',title:'Зеро',short:'ЗЕРО'};
+  for(const segment of C.sectorLayout(items,spin)){
+    const degrees=segment.end-segment.start,layout=C.fitWheelLabel(C.wheelLabel(segment.item),degrees,measure);
+    if(!layout)continue;
+    assert.ok(layout.size>=14&&layout.size<=26);
+    if(layout.full)assert.equal(Array.from(layout.lines).join(' '),C.wheelLabel(segment.item));
+    layout.lines.forEach((line,i)=>{
+      const width=measure(line,layout.size),edge=Math.abs((i-(layout.lines.length-1)/2)*layout.lineHeight)+layout.size*.58;
+      const left=layout.radius-width/2,right=layout.radius+width/2;
+      assert.ok(left>=84-1e-8,'Text clears the hub');
+      assert.ok(Math.hypot(right,edge)<=280+1e-8,'Text clears the rim');
+      assert.ok(left*Math.tan(Math.min(89,degrees/2)*Math.PI/180)>=edge+3-1e-8,'Text clears sector borders');
+    });layoutsChecked++;
+  }
+}
+assert.ok(layoutsChecked>100);
+assert.equal(C.fitWheelLabel('КОМПЕНСАЦИЯ',18,measure).full,true);
+assert.equal(C.fitWheelLabel('БОЛЬШОЙ ШРИФТ',18,measure).full,true);
+assert.ok(C.fitWheelLabel('ЗАСТАВКА',90,measure).size>C.fitWheelLabel('ЗАСТАВКА',18,measure).size);
+assert.equal(C.fitWheelLabel('МИКРОСЕКТОР',.1,measure),null,'Do not overlap neighbors at an extremely low weight');
 const state=C.newState();
+const longLabels=C.defaults();longLabels[0].short='ПОЛНАЯ ПОДПИСЬ БЕЗ ОГРАНИЧЕНИЯ В ДВАДЦАТЬ ЗНАКОВ';
+assert.equal(C.validateItems(longLabels),'');
+assert.equal(C.normalizeState({...C.newState(),items:longLabels}).items[0].short,longLabels[0].short);
 assert.equal(state.items.length,18);
 assert.equal(state.items.filter(i=>i.kind==='task').length,12);
 assert.deepEqual(Array.from(state.items.filter(i=>i.kind==='friend'),i=>i.title),['Толик','Дима','Стас','Саня','Кирилл']);
